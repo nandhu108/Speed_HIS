@@ -1,0 +1,243 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Prixo HIS design tokens — the single place to adjust branding.
+     Classic corporate palette (2026-08-08): navy/blue instead of teal-indigo-violet,
+     flat panels instead of glass, tighter radii instead of pill-shaped "shell" corners. */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+
+  /* Shell tokens — used by AppShell, auth pages and shared ui/ primitives.
+     Values are re-pointed at runtime by the `.dark` block below. */
+  --color-shell-bg: #eef2f7;
+  --color-shell-bg2: #e4e9f1;
+  --color-panel: #ffffff;
+  --color-panel-2: #f3f5f9;
+  --color-panel-solid: #ffffff;
+  --color-border-soft: rgb(15 23 42 / 0.1);
+  --color-border-strong: rgb(15 23 42 / 0.18);
+  --color-ink: #0f1a2e;
+  --color-ink-muted: #586a86;
+  --color-ink-faint: #8493ab;
+
+  --color-accent: #1e3a8a;
+  --color-accent-2: #2563eb;
+  --color-indigo: #1e40af;
+  --color-violet: #334155;
+  --color-crit: #e11d48;
+  --color-ok: #059669;
+  --color-warn: #d97706;
+  --color-info: #2563eb;
+
+  /* Roboto across the whole ERP. `--font-display` is kept as a separate token so the ~10
+     `font-display` headings stay addressable if a distinct display face is wanted later;
+     `--font-mono` stays a real monospace (Roboto's own) because the 180-odd `font-mono`
+     spans are UHIDs, bill numbers and amounts that have to stay column-aligned. */
+  --font-display: 'Roboto', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Roboto', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --radius-shell: 8px;
+  --radius-shell-sm: 6px;
+
+  --shadow-shell-sm: 0 1px 2px rgb(15 23 42 / 0.08);
+  --shadow-shell-md: 0 6px 16px -8px rgb(15 23 42 / 0.18);
+  --shadow-shell-lg: 0 12px 28px -12px rgb(15 23 42 / 0.22);
+}
+
+.dark {
+  --color-shell-bg: #070a13;
+  --color-shell-bg2: #0b1022;
+  --color-panel: #0e1526;
+  --color-panel-2: #131b2e;
+  --color-panel-solid: #0e1526;
+  --color-border-soft: rgb(255 255 255 / 0.09);
+  --color-border-strong: rgb(255 255 255 / 0.15);
+  --color-ink: #e8edf7;
+  --color-ink-muted: #93a1b8;
+  --color-ink-faint: #5d6b83;
+
+  --color-accent: #3b82f6;
+  --color-accent-2: #60a5fa;
+
+  --shadow-shell-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-shell-md: 0 6px 16px -8px rgb(0 0 0 / 0.5);
+  --shadow-shell-lg: 0 12px 28px -12px rgb(0 0 0 / 0.6);
+}
+
+body {
+  @apply bg-shell-bg text-ink antialiased;
+  font-family: var(--font-sans);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 20px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/*
+ * Legacy-page dark-mode retrofit. Most of the app predates the ink/panel token system above and
+ * was built with the static Tailwind slate/red/amber/green/blue/white palette — those utilities
+ * have no dark-mode counterpart of their own, so a `.dark` toggle left every one of those pages
+ * a light-only card stranded inside an otherwise-dark shell (unreadable/mismatched contrast).
+ * Hand-editing every affected file (~175 across the app) isn't practical in one pass, so this
+ * remaps the exact legacy utility classes still in use to the equivalent theme token whenever
+ * `.dark` is active — a single, centralized fix instead of hundreds of scattered ones.
+ * New/updated code should use the token classes directly (bg-panel-solid, text-ink,
+ * border-border-soft, text-crit, etc.) and never needs this list touched.
+ */
+.dark .bg-white,
+.dark .hover\:bg-white:hover {
+  background-color: var(--color-panel-solid);
+}
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-slate-200,
+.dark .hover\:bg-slate-50:hover,
+.dark .disabled\:bg-slate-50:disabled {
+  background-color: var(--color-panel-2);
+}
+.dark .bg-slate-800,
+.dark .bg-slate-900 {
+  background-color: var(--color-panel-solid);
+}
+
+.dark .border-white {
+  border-color: var(--color-border-soft);
+}
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: var(--color-border-soft);
+}
+.dark .border-slate-300 {
+  border-color: var(--color-border-strong);
+}
+.dark .divide-slate-100 > :not(:last-child) {
+  border-color: var(--color-border-soft);
+}
+
+.dark .text-slate-300,
+.dark .text-slate-400,
+.dark .text-slate-500 {
+  color: var(--color-ink-faint);
+}
+.dark .text-slate-600 {
+  color: var(--color-ink-muted);
+}
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .hover\:text-slate-700:hover {
+  color: var(--color-ink);
+}
+
+.dark .bg-red-50 {
+  background-color: color-mix(in srgb, var(--color-crit) 12%, transparent);
+}
+.dark .bg-red-600 {
+  background-color: var(--color-crit);
+}
+.dark .border-red-200 {
+  border-color: color-mix(in srgb, var(--color-crit) 35%, transparent);
+}
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800 {
+  color: var(--color-crit);
+}
+
+.dark .bg-amber-50 {
+  background-color: color-mix(in srgb, var(--color-warn) 12%, transparent);
+}
+.dark .border-amber-200,
+.dark .border-amber-300,
+.dark .border-amber-400 {
+  border-color: color-mix(in srgb, var(--color-warn) 35%, transparent);
+}
+.dark .text-amber-600,
+.dark .text-amber-700,
+.dark .text-amber-800 {
+  color: var(--color-warn);
+}
+
+.dark .bg-green-50,
+.dark .bg-emerald-50 {
+  background-color: color-mix(in srgb, var(--color-ok) 12%, transparent);
+}
+.dark .text-green-700,
+.dark .text-emerald-600,
+.dark .text-emerald-700 {
+  color: var(--color-ok);
+}
+
+.dark .bg-blue-50 {
+  background-color: color-mix(in srgb, var(--color-info) 12%, transparent);
+}
+.dark .text-blue-700 {
+  color: var(--color-info);
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Comfort layer (2026-08-11)
+ * ---------------------------------------------------------------------------
+ * Centralized ergonomics for all-day data-entry use. Kept here rather than on
+ * each primitive so the ~175 pages that predate the ui/ primitives get it too.
+ */
+
+/* Keyboard focus. The app had no :focus-visible styling at all — every primitive
+   sets `outline-none` and only *some* add a :focus ring, so tabbing through a
+   registration or billing form left the caret invisible. :focus-visible only
+   paints for keyboard/AT users, so mouse clicks stay visually unchanged. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent-2);
+  outline-offset: 2px;
+  border-radius: var(--radius-shell-sm);
+}
+
+/* Skip the ring when an element already draws its own focus treatment. */
+:where(input, select, textarea):focus-visible {
+  outline-offset: 0;
+}
+
+/* Disabled controls should read as unavailable before they're clicked. */
+:where(button, [role='button']):disabled {
+  cursor: not-allowed;
+}
+
+/* Respect the OS "reduce motion" setting — spinners keep turning (they convey
+   pending state) but transitions/animations elsewhere stop. */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Numeric columns (money, quantities, UHID/IP numbers) line up digit-for-digit. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

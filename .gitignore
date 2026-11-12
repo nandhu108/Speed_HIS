@@ -1,0 +1,42 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+TestResults/
+*.trx
+publish/
+
+# --- Node / Vite ---
+node_modules/
+*/node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+coverage/
+playwright-report/
+test-results/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+!frontend/.env.development
+appsettings.*.local.json
+secrets.json
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Uploaded files (local dev file storage) ---
+App_Data/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

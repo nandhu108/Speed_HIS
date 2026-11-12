@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Prixo.Api/Prixo.Api.csproj" />
+    <Project Path="src/Prixo.Application/Prixo.Application.csproj" />
+    <Project Path="src/Prixo.Domain/Prixo.Domain.csproj" />
+    <Project Path="src/Prixo.Infrastructure/Prixo.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Prixo.Api.IntegrationTests/Prixo.Api.IntegrationTests.csproj" />
+    <Project Path="tests/Prixo.Application.Tests/Prixo.Application.Tests.csproj" />
+    <Project Path="tests/Prixo.Domain.Tests/Prixo.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

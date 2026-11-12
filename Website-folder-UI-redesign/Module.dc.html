@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<style>
+:root{
+  --bg:#070a13;--bg2:#0b1022;--panel:rgba(255,255,255,.045);--panel-2:rgba(255,255,255,.07);
+  --panel-solid:#0e1526;--border:rgba(255,255,255,.09);--border-2:rgba(255,255,255,.15);
+  --text:#e8edf7;--muted:#93a1b8;--faint:#5d6b83;
+  --accent:#2dd4bf;--accent2:#22d3ee;--violet:#8b5cf6;--indigo:#6366f1;
+  --grad:linear-gradient(135deg,#22d3ee 0%,#6366f1 100%);
+  --grad-teal:linear-gradient(135deg,#2dd4bf 0%,#22d3ee 100%);
+  --crit:#fb7185;--ok:#34d399;--warn:#fbbf24;--info:#60a5fa;--purple:#a78bfa;
+  --shadow:0 18px 40px -22px rgba(0,0,0,.75);--r:18px;--r-sm:12px;
+}
+[data-theme="light"]{
+  --bg:#e9eef7;--bg2:#dde6f4;--panel:rgba(255,255,255,.7);--panel-2:rgba(255,255,255,.92);
+  --panel-solid:#ffffff;--border:rgba(15,23,42,.08);--border-2:rgba(15,23,42,.14);
+  --text:#0f1a2e;--muted:#586a86;--faint:#8493ab;
+  --shadow:0 16px 34px -20px rgba(35,55,95,.28);
+}
+*{box-sizing:border-box}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+*{scrollbar-width:thin;scrollbar-color:var(--border-2) transparent}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:20px}
+::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div class="pane-scroll" style="height:100%;overflow-y:auto;color:var(--text);font-family:'Manrope',sans-serif;padding:22px 24px 40px">
+
+<!-- ══ DASHBOARD ══ -->
+<sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px;animation:fadeUp .4s ease both">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div>
+      <h2 style="font-family:'Space Grotesk';font-size:26px;font-weight:700;margin:0;letter-spacing:-.02em">Good morning, Dr. Ramkumar</h2>
+      <p style="margin:4px 0 0;color:var(--muted);font-size:13.5px">Apollo MediCore Hospital · Saturday, 19 July · 10:42 AM</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--border);font-size:12.5px;font-weight:600;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulseDot 2s infinite"></span>All systems nominal</span>
+      <button style="display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:999px;background:var(--grad);border:none;color:#fff;text-shadow:0 1px 2px rgba(15,23,42,.3);font-weight:700;font-size:12.5px;cursor:pointer;box-shadow:0 8px 20px -10px var(--accent2);white-space:nowrap"><i class="ph-bold ph-plus"></i>New Admission</button>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">
+    <!-- census -->
+    <div style="position:relative;overflow:hidden;padding:18px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <span style="font-size:12px;color:var(--muted);font-weight:600">Today's Census</span>
+        <span style="display:inline-flex;align-items:center;gap:3px;color:var(--ok);font-size:12px;font-weight:700"><i class="ph-bold ph-trend-up"></i>+12</span>
+      </div>
+      <div class="mono" style="font-size:34px;font-weight:600;margin:6px 0 2px;letter-spacing:-.02em">247</div>
+      <div style="font-size:11.5px;color:var(--faint)">active inpatients · 32 critical</div>
+      <svg viewBox="0 0 240 44" preserveAspectRatio="none" style="width:100%;height:40px;margin-top:10px;display:block">
+        <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent2)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent2)" stop-opacity="0"/></linearGradient></defs>
+        <path d="{{ admArea }}" fill="url(#sg)"/>
+        <path d="{{ admLine }}" fill="none" stroke="var(--accent2)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>
+    </div>
+    <!-- bed occupancy -->
+    <div style="padding:18px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <span style="font-size:12px;color:var(--muted);font-weight:600">Bed Occupancy</span>
+      <div style="display:flex;align-items:baseline;gap:6px;margin:6px 0 10px">
+        <span class="mono" style="font-size:30px;font-weight:600">169</span>
+        <span class="mono" style="font-size:14px;color:var(--faint)">/ 228</span>
+        <span style="margin-left:auto;font-size:13px;font-weight:700;color:var(--warn)">74%</span>
+      </div>
+      <div style="display:flex;height:9px;border-radius:99px;overflow:hidden;gap:2px;background:var(--panel-2)">
+        <div style="width:55%;background:var(--indigo)"></div><div style="width:8%;background:var(--accent)"></div><div style="width:5%;background:var(--crit)"></div><div style="width:6%;background:var(--warn)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:12px;font-size:11.5px">
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:3px;background:var(--indigo)"></span><span style="color:var(--muted)">General</span><span class="mono" style="margin-left:auto">126/160</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:3px;background:var(--accent)"></span><span style="color:var(--muted)">Private</span><span class="mono" style="margin-left:auto">18/32</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:3px;background:var(--crit)"></span><span style="color:var(--muted)">ICU</span><span class="mono" style="margin-left:auto">11/12</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:3px;background:var(--warn)"></span><span style="color:var(--muted)">Emerg</span><span class="mono" style="margin-left:auto">14/24</span></div>
+      </div>
+    </div>
+    <!-- revenue -->
+    <div style="padding:18px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <span style="font-size:12px;color:var(--muted);font-weight:600">Revenue — Today</span>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:10px">
+        <div style="position:relative;width:72px;height:72px;flex-shrink:0">
+          <svg viewBox="0 0 44 44" style="width:72px;height:72px;transform:rotate(-90deg)">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--panel-2)" stroke-width="5"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-dasharray="113" stroke-dashoffset="9"/>
+          </svg>
+          <span class="mono" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600">92%</span>
+        </div>
+        <div>
+          <div class="mono" style="font-size:20px;font-weight:600;letter-spacing:-.02em">₹4,28,500</div>
+          <div style="font-size:11.5px;color:var(--faint);margin-top:2px">collected of ₹4.66L</div>
+          <div style="font-size:11.5px;color:var(--warn);margin-top:6px">₹37,500 outstanding</div>
+        </div>
+      </div>
+    </div>
+    <!-- alerts -->
+    <div style="position:relative;overflow:hidden;padding:18px;border-radius:var(--r);background:linear-gradient(135deg,rgba(251,113,133,.16),rgba(139,92,246,.1));border:1px solid rgba(251,113,133,.3);box-shadow:var(--shadow)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <span style="font-size:12px;color:var(--text);font-weight:700">Critical Alerts</span>
+        <span style="width:9px;height:9px;border-radius:50%;background:var(--crit);animation:pulseDot 1.4s infinite;box-shadow:0 0 12px var(--crit)"></span>
+      </div>
+      <div class="mono" style="font-size:34px;font-weight:600;margin:6px 0 2px">3</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">requiring attention now</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:11.5px">
+        <div style="display:flex;align-items:center;gap:6px"><i class="ph-bold ph-heartbeat" style="color:var(--crit)"></i>2 unstable vitals · ICU</div>
+        <div style="display:flex;align-items:center;gap:6px"><i class="ph-bold ph-first-aid" style="color:var(--crit)"></i>1 ER trauma incoming</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+    <div style="padding:18px 20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div><p style="margin:0;font-weight:700;font-size:14.5px">Weekly Admissions</p><p style="margin:2px 0 0;font-size:12px;color:var(--muted)">Last 7 days · peak Friday</p></div>
+        <span class="mono" style="font-size:12px;color:var(--accent)">551 total</span>
+      </div>
+      <svg viewBox="0 0 560 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block;margin-top:8px">
+        <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--indigo)" stop-opacity=".3"/><stop offset="1" stop-color="var(--indigo)" stop-opacity="0"/></linearGradient></defs>
+        <path d="{{ dashAdmArea }}" fill="url(#ag)"/>
+        <path d="{{ dashAdmLine }}" fill="none" stroke="var(--indigo)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--faint)"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    </div>
+    <div style="padding:18px 20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <p style="margin:0 0 14px;font-weight:700;font-size:14.5px">Revenue by Department</p>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{ deptBars }}" as="d" hint-placeholder-count="6">
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:4px"><span style="color:var(--muted)">{{ d.dept }}</span><span class="mono">{{ d.label }}</span></div>
+            <div style="height:7px;border-radius:99px;background:var(--panel-2);overflow:hidden"><div style="height:100%;border-radius:99px;width:{{ d.pct }};background:var(--grad-teal)"></div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+    <div style="padding:18px 20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="margin:0;font-weight:700;font-size:14.5px">Critical Patients</p><span style="font-size:11.5px;color:var(--crit);font-weight:600">Live monitoring</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ critical }}" as="p" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:14px;background:var(--panel-2);border:1px solid var(--border)">
+            <div style="width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px;background:{{ p.color }}">{{ p.initials }}</div>
+            <div style="min-width:0;flex:1">
+              <div style="font-weight:600;font-size:13px">{{ p.name }}</div>
+              <div style="font-size:11.5px;color:var(--muted)">{{ p.diagnosis }} · {{ p.ward }}</div>
+            </div>
+            <div style="display:flex;gap:12px;flex-shrink:0" class="mono">
+              <div style="text-align:right"><div style="font-size:9px;color:var(--faint)">HR</div><div style="font-size:13px;color:var(--crit);font-weight:600">{{ p.hr }}</div></div>
+              <div style="text-align:right"><div style="font-size:9px;color:var(--faint)">SpO₂</div><div style="font-size:13px;font-weight:600">{{ p.spo2 }}</div></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="padding:18px 20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(14px)">
+      <p style="margin:0 0 12px;font-weight:700;font-size:14.5px">Activity Feed</p>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <sc-for list="{{ feed }}" as="f" hint-placeholder-count="5">
+          <div style="display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div style="width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ f.bg }}"><i class="ph-bold {{ f.icon }}" style="color:{{ f.color }};font-size:15px"></i></div>
+            <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500">{{ f.text }}</div><div style="font-size:11px;color:var(--faint)">{{ f.time }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ PATIENTS ══ -->
+<sc-if value="{{ isPatients }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px;animation:fadeUp .4s ease both">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="position:relative;flex:1;min-width:220px">
+      <i class="ph-bold ph-magnifying-glass" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--faint)"></i>
+      <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search patients by name, ID, ward, diagnosis…" style="width:100%;padding:11px 14px 11px 40px;border-radius:12px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:13px;outline:none"/>
+    </div>
+    <div style="display:flex;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:4px">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+        <button onClick="{{ f.onClick }}" style="padding:7px 13px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px">
+    <sc-for list="{{ patients }}" as="p" hint-placeholder-count="8">
+      <div onClick="{{ p.onClick }}" style="cursor:pointer;padding:16px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(12px);transition:transform .18s ease,border-color .18s ease" style-hover="transform:translateY(-4px);border-color:var(--border-2)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:44px;height:44px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;background:{{ p.color }}">{{ p.initials }}</div>
+          <div style="min-width:0;flex:1">
+            <div style="font-weight:700;font-size:14px">{{ p.name }}</div>
+            <div class="mono" style="font-size:11px;color:var(--faint)">{{ p.id }} · {{ p.age }}{{ p.gender }} · {{ p.blood }}</div>
+          </div>
+          <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;font-size:10.5px;font-weight:700;background:{{ p.pillBg }};color:{{ p.pillFg }}"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.pillFg }}"></span>{{ p.statusLabel }}</span>
+        </div>
+        <div style="margin-top:13px;font-size:12.5px;color:var(--muted)">{{ p.diagnosis }}</div>
+        <div style="font-size:11.5px;color:var(--faint);margin-top:2px">{{ p.ward }} · Bed {{ p.bed }} · {{ p.doctor }}</div>
+        <div style="display:flex;gap:8px;margin-top:13px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="mono" style="flex:1;text-align:center"><div style="font-size:9px;color:var(--faint)">BP</div><div style="font-size:13px;font-weight:600">{{ p.bp }}</div></div>
+          <div class="mono" style="flex:1;text-align:center"><div style="font-size:9px;color:var(--faint)">HR</div><div style="font-size:13px;font-weight:600;color:{{ p.hrColor }}">{{ p.hr }}</div></div>
+          <div class="mono" style="flex:1;text-align:center"><div style="font-size:9px;color:var(--faint)">SpO₂</div><div style="font-size:13px;font-weight:600;color:{{ p.spo2Color }}">{{ p.spo2 }}%</div></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ WARD MAP (2.5D) ══ -->
+<sc-if value="{{ isWard }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px;animation:fadeUp .4s ease both">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <h2 style="font-family:'Space Grotesk';font-size:22px;font-weight:700;margin:0">Live Ward Map</h2>
+    <div style="display:flex;gap:14px;margin-left:auto;flex-wrap:wrap;font-size:11.5px;color:var(--muted)">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:4px;background:var(--crit)"></span>Critical</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:4px;background:var(--info)"></span>Occupied</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:4px;background:var(--ok)"></span>Available</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:4px;background:var(--warn)"></span>Reserved</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:4px;background:var(--faint)"></span>Maint.</span>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <sc-for list="{{ ward }}" as="z" hint-placeholder-count="3">
+      <div style="border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;backdrop-filter:blur(12px)">
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);background:{{ z.headBg }}">
+          <i class="ph-duotone {{ z.icon }}" style="font-size:19px;color:{{ z.accent }}"></i>
+          <span style="font-weight:700;font-size:13px;letter-spacing:.02em">{{ z.label }}</span>
+          <span class="mono" style="margin-left:auto;font-size:11.5px;color:var(--muted)">{{ z.occ }}</span>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-wrap:wrap;gap:24px">
+          <sc-for list="{{ z.rooms }}" as="rm" hint-placeholder-count="4">
+            <div>
+              <div style="font-size:11px;color:var(--faint);font-weight:600;margin-bottom:9px;text-transform:uppercase;letter-spacing:.06em">{{ rm.label }}</div>
+              <div style="display:flex;gap:11px;flex-wrap:wrap">
+                <sc-for list="{{ rm.beds }}" as="b" hint-placeholder-count="4">
+                  <div title="{{ b.tip }}" style="width:78px;height:74px;border-radius:13px;padding:9px;cursor:pointer;position:relative;background:{{ b.bg }};border:1px solid {{ b.bd }};box-shadow:{{ b.shadow }};transition:transform .16s ease" style-hover="transform:translateY(-5px) rotateX(6deg)">
+                    <div class="mono" style="font-size:9.5px;font-weight:600;color:{{ b.fg }};opacity:.85">{{ b.id }}</div>
+                    <i class="ph-duotone {{ b.icon }}" style="position:absolute;bottom:8px;left:9px;font-size:16px;color:{{ b.fg }}"></i>
+                    <div style="position:absolute;bottom:9px;right:9px;font-size:9px;font-weight:700;color:{{ b.fg }}" class="mono">{{ b.mini }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ AI ASSISTANT ══ -->
+<sc-if value="{{ isAI }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;height:calc(100% - 4px);animation:fadeUp .4s ease both">
+  <div style="display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:16px">
+    <div style="width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--grad);box-shadow:0 10px 24px -10px var(--indigo)"><i class="ph-duotone ph-sparkle" style="color:#fff;font-size:20px"></i></div>
+    <div><p style="margin:0;font-weight:700;font-size:15px">AI Clinical Assistant</p><p style="margin:2px 0 0;font-size:11.5px;color:var(--muted)">THIS Intelligence · clinical reasoning engine</p></div>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);animation:pulseDot 2s infinite"></span>Online</span>
+  </div>
+  <div class="pane-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-right:6px;min-height:180px">
+    <sc-for list="{{ aiMsgs }}" as="m" hint-placeholder-count="3">
+      <div style="display:flex;gap:10px;justify-content:{{ m.justify }}">
+        <sc-if value="{{ m.isBot }}" hint-placeholder-val="{{ true }}"><div style="width:30px;height:30px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--grad)"><i class="ph-bold ph-sparkle" style="color:#fff;font-size:14px"></i></div></sc-if>
+        <div style="max-width:76%;padding:12px 15px;border-radius:16px;font-size:13px;line-height:1.55;white-space:pre-line;background:{{ m.bg }};color:{{ m.fg }};border:1px solid {{ m.bd }}">{{ m.text }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="margin-top:14px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <sc-for list="{{ aiChips }}" as="c" hint-placeholder-count="4">
+        <button onClick="{{ c.onClick }}" style="padding:7px 13px;border-radius:99px;font-size:11.5px;font-family:inherit;cursor:pointer;background:var(--panel-2);border:1px solid var(--border);color:var(--muted)">{{ c.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:10px">
+      <input value="{{ aiInput }}" onInput="{{ onAiInput }}" onKeyDown="{{ onAiKey }}" placeholder="Ask about patients, diagnoses, drug interactions…" style="flex:1;padding:13px 16px;border-radius:14px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:13px;outline:none"/>
+      <button onClick="{{ sendAi }}" style="width:48px;border-radius:14px;border:none;cursor:pointer;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px -10px var(--indigo)"><i class="ph-bold ph-paper-plane-right" style="font-size:18px"></i></button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ REPORTS ══ -->
+<sc-if value="{{ isReports }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px;animation:fadeUp .4s ease both">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+      <div style="flex:1;min-width:150px;padding:15px 17px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(12px)">
+        <div style="font-size:11.5px;color:var(--muted);font-weight:600">{{ k.label }}</div>
+        <div class="mono" style="font-size:22px;font-weight:600;margin-top:5px">{{ k.value }}</div>
+        <div style="font-size:11px;color:{{ k.color }};margin-top:3px;font-weight:600">{{ k.delta }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="padding:20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(12px)">
+    <p style="margin:0 0 2px;font-weight:700;font-size:14.5px">Revenue vs Expenses — 2025</p>
+    <p style="margin:0 0 16px;font-size:12px;color:var(--muted)">Monthly · INR lakhs</p>
+    <svg viewBox="0 0 720 200" preserveAspectRatio="none" style="width:100%;height:200px;display:block">
+      <defs>
+        <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--indigo)" stop-opacity=".28"/><stop offset="1" stop-color="var(--indigo)" stop-opacity="0"/></linearGradient>
+      </defs>
+      <path d="{{ repRevArea }}" fill="url(#rg)"/>
+      <path d="{{ repRevLine }}" fill="none" stroke="var(--indigo)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+      <path d="{{ repExpLine }}" fill="none" stroke="var(--crit)" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--faint)"><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span></div>
+    <div style="display:flex;gap:18px;margin-top:12px;font-size:11.5px"><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--indigo);border-radius:2px"></span>Revenue</span><span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:3px;background:var(--crit);border-radius:2px"></span>Expenses</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+    <div style="padding:20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(12px)">
+      <p style="margin:0 0 16px;font-weight:700;font-size:14.5px">Monthly Patient Volume</p>
+      <div style="display:flex;align-items:flex-end;gap:10px;height:140px">
+        <sc-for list="{{ volBars }}" as="v" hint-placeholder-count="7">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+            <div style="width:100%;border-radius:6px 6px 0 0;background:var(--grad-teal);height:{{ v.h }}"></div>
+            <span style="font-size:10px;color:var(--faint)">{{ v.m }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="padding:20px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(12px)">
+      <p style="margin:0 0 16px;font-weight:700;font-size:14.5px">Department Revenue Split</p>
+      <div style="display:flex;align-items:center;gap:22px">
+        <svg viewBox="0 0 42 42" style="width:130px;height:130px;transform:rotate(-90deg)">
+          <sc-for list="{{ donut }}" as="d" hint-placeholder-count="6">
+            <circle cx="21" cy="21" r="15.9" fill="none" stroke="{{ d.color }}" stroke-width="7" stroke-dasharray="{{ d.dash }}" stroke-dashoffset="{{ d.offset }}"/>
+          </sc-for>
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:11.5px">
+          <sc-for list="{{ donut }}" as="d" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:3px;background:{{ d.color }}"></span><span style="color:var(--muted)">{{ d.dept }}</span><span class="mono" style="margin-left:auto">{{ d.label }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ SETTINGS ══ -->
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;gap:20px;flex-wrap:wrap;animation:fadeUp .4s ease both">
+  <div style="width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:3px">
+    <sc-for list="{{ setTabs }}" as="t" hint-placeholder-count="6">
+      <button onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;text-align:left;background:{{ t.bg }};color:{{ t.fg }}"><i class="ph-duotone {{ t.icon }}" style="font-size:17px"></i>{{ t.label }}</button>
+    </sc-for>
+  </div>
+  <div style="flex:1;min-width:0;padding:22px;border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(12px)">
+    <h3 style="margin:0 0 4px;font-family:'Space Grotesk';font-size:17px;font-weight:700">{{ setActiveLabel }}</h3>
+    <p style="margin:0 0 20px;font-size:12.5px;color:var(--muted)">Configure {{ setActiveLower }} for Apollo MediCore Hospital</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px">
+      <sc-for list="{{ setFields }}" as="f" hint-placeholder-count="6">
+        <div>
+          <label style="font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">{{ f.label }}</label>
+          <input value="{{ f.value }}" style="width:100%;padding:10px 13px;border-radius:11px;background:var(--panel-2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12.5px;outline:none"/>
+        </div>
+      </sc-for>
+    </div>
+    <button style="margin-top:20px;padding:11px 22px;border-radius:11px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:12.5px;background:var(--grad);color:#fff;text-shadow:0 1px 2px rgba(15,23,42,.3)">Save Changes</button>
+  </div>
+</div>
+</sc-if>
+
+<!-- ══ DATA TABLE MODULES ══ -->
+<sc-if value="{{ isTable }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:16px;animation:fadeUp .4s ease both">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div style="min-width:0"><h2 style="font-family:'Space Grotesk';font-size:22px;font-weight:700;margin:0;white-space:nowrap">{{ tbl.title }}</h2><p style="margin:4px 0 0;font-size:12.5px;color:var(--muted);white-space:nowrap">{{ tbl.subtitle }}</p></div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button style="display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:11px;background:var(--panel);border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0"><i class="ph-bold ph-download-simple"></i>Export</button>
+      <button style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:11px;background:var(--grad);border:none;color:#fff;text-shadow:0 1px 2px rgba(15,23,42,.3);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0"><i class="ph-bold ph-plus"></i>{{ tbl.action }}</button>
+    </div>
+  </div>
+  <div style="border-radius:var(--r);background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);overflow-x:auto;backdrop-filter:blur(12px)">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px">
+      <thead>
+        <tr style="background:var(--panel-2)">
+          <sc-for list="{{ tbl.cols }}" as="c" hint-placeholder-count="5">
+            <th style="text-align:{{ c.align }};padding:13px 16px;font-size:10.5px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">{{ c.label }}</th>
+          </sc-for>
+        </tr>
+      </thead>
+      <tbody>
+        <sc-for list="{{ tbl.rows }}" as="r" hint-placeholder-count="6">
+          <tr style="border-top:1px solid var(--border)">
+            <sc-for list="{{ r.cells }}" as="cell" hint-placeholder-count="5">
+              <td style="padding:13px 16px;text-align:{{ cell.align }};vertical-align:middle">
+                <sc-if value="{{ cell.isPill }}" hint-placeholder-val="{{ true }}">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:10.5px;font-weight:700;white-space:nowrap;flex-shrink:0;background:{{ cell.bg }};color:{{ cell.fg }}"><span style="width:6px;height:6px;border-radius:50%;flex-shrink:0;background:{{ cell.fg }}"></span>{{ cell.text }}</span>
+                </sc-if>
+                <sc-if value="{{ cell.isBar }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:9px;white-space:nowrap"><div style="width:70px;height:6px;border-radius:99px;background:var(--panel-2);overflow:hidden;flex-shrink:0"><div style="height:100%;width:{{ cell.pct }};background:{{ cell.barColor }}"></div></div><span class="mono" style="font-size:11.5px">{{ cell.text }}</span></div>
+                </sc-if>
+                <sc-if value="{{ cell.isText }}" hint-placeholder-val="{{ true }}">
+                  <div style="white-space:nowrap"><div style="font-weight:{{ cell.weight }};font-size:12.5px;white-space:nowrap" class="{{ cell.cls }}">{{ cell.text }}</div><sc-if value="{{ cell.hasSub }}" hint-placeholder-val="{{ true }}"><div class="mono" style="font-size:10.5px;color:var(--faint);margin-top:2px;white-space:nowrap">{{ cell.sub }}</div></sc-if></div>
+                </sc-if>
+              </td>
+            </sc-for>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:&quot;100%&quot;},&quot;mod&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;patients&quot;,&quot;ward&quot;,&quot;ai&quot;,&quot;reports&quot;,&quot;settings&quot;,&quot;appointments&quot;,&quot;laboratory&quot;,&quot;pharmacy&quot;,&quot;billing&quot;,&quot;hrms&quot;,&quot;doctors&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { search:"", filter:"all", settingsTab:"hospital", aiInput:"",
+    aiMsgs:[
+      {role:"bot", text:"Hello Dr. Ramkumar. I can help with patient summaries, drug interactions, diagnostic suggestions and clinical decision support. How can I assist?"},
+      {role:"user", text:"Summarise today's critical patients"},
+      {role:"bot", text:"3 critical inpatients as of 10:42:\n\n1. Vijay Singh (P-2843) — Acute MI, 55y · ER-04. Troponin I 8.4 ng/mL. HR 122, BP 92/60, SpO₂ 91%. Dr. Karan Malhotra. Action: cardiac catheterisation.\n\n2. Neha Kapoor (P-2842) — Septic Shock, 40y · ICU-07, day 4. BP stabilising on vasopressors. HR 118, SpO₂ 89%. Dr. Priya Sharma.\n\n3. Rohan Gupta (P-2845) — TBI, 28y · N-308. R frontal contusion, ICP monitor active. HR 104, SpO₂ 93%. Dr. Anika Patel."}
+    ]
+  };
+
+  patients = [
+    {id:"P-2847",name:"Arjun Mehta",age:45,gender:"M",blood:"B+",ward:"Cardiology",bed:"C-204",status:"stable",diagnosis:"Hypertension",doctor:"Dr. Priya Sharma",bp:"128/84",hr:72,spo2:98},
+    {id:"P-2846",name:"Sunita Verma",age:62,gender:"F",blood:"O+",ward:"Orthopedics",bed:"O-112",status:"post-op",diagnosis:"Hip Replacement",doctor:"Dr. Rajesh Kumar",bp:"116/72",hr:80,spo2:97},
+    {id:"P-2845",name:"Rohan Gupta",age:28,gender:"M",blood:"A+",ward:"Neurology",bed:"N-308",status:"critical",diagnosis:"Traumatic Brain Injury",doctor:"Dr. Anika Patel",bp:"148/96",hr:104,spo2:93},
+    {id:"P-2844",name:"Kavya Reddy",age:35,gender:"F",blood:"AB-",ward:"Gynecology",bed:"G-205",status:"stable",diagnosis:"Post-natal Care",doctor:"Dr. Meena Iyer",bp:"110/70",hr:76,spo2:99},
+    {id:"P-2843",name:"Vijay Singh",age:55,gender:"M",blood:"B-",ward:"Emergency",bed:"E-04",status:"critical",diagnosis:"Acute MI",doctor:"Dr. Karan Malhotra",bp:"92/60",hr:122,spo2:91},
+    {id:"P-2842",name:"Neha Kapoor",age:40,gender:"F",blood:"O-",ward:"ICU",bed:"ICU-07",status:"critical",diagnosis:"Septic Shock",doctor:"Dr. Priya Sharma",bp:"88/56",hr:118,spo2:89},
+    {id:"P-2841",name:"Amit Joshi",age:31,gender:"M",blood:"A-",ward:"Pediatrics",bed:"P-104",status:"recovering",diagnosis:"Pneumonia",doctor:"Dr. Ritu Bansal",bp:"118/76",hr:88,spo2:96},
+    {id:"P-2840",name:"Priya Nair",age:48,gender:"F",blood:"B+",ward:"Oncology",bed:"ON-211",status:"stable",diagnosis:"Breast Cancer Chemo",doctor:"Dr. Vivek Shah",bp:"122/78",hr:74,spo2:98}
+  ];
+  doctors=[
+    {id:"D-001",name:"Dr. Priya Sharma",spec:"Cardiologist",patients:14,rating:4.9,status:"available",exp:12},
+    {id:"D-002",name:"Dr. Rajesh Kumar",spec:"Orthopedic Surgeon",patients:9,rating:4.8,status:"in-consultation",exp:18},
+    {id:"D-003",name:"Dr. Anika Patel",spec:"Neurologist",patients:11,rating:4.7,status:"available",exp:10},
+    {id:"D-004",name:"Dr. Meena Iyer",spec:"Gynecologist",patients:16,rating:4.9,status:"busy",exp:15},
+    {id:"D-005",name:"Dr. Karan Malhotra",spec:"Emergency Medicine",patients:22,rating:4.6,status:"on-call",exp:8},
+    {id:"D-006",name:"Dr. Ritu Bansal",spec:"Pediatrician",patients:18,rating:4.8,status:"available",exp:14}
+  ];
+  appts=[
+    {id:"APT-1047",patient:"Arjun Mehta",doctor:"Dr. Priya Sharma",dept:"Cardiology",time:"09:00",type:"Follow-up",status:"confirmed",token:1},
+    {id:"APT-1048",patient:"Lakshmi Devi",doctor:"Dr. Ritu Bansal",dept:"Pediatrics",time:"09:30",type:"New",status:"waiting",token:2},
+    {id:"APT-1049",patient:"Mohan Das",doctor:"Dr. Rajesh Kumar",dept:"Orthopedics",time:"10:00",type:"Post-op",status:"in-progress",token:3},
+    {id:"APT-1050",patient:"Gita Sharma",doctor:"Dr. Meena Iyer",dept:"Gynecology",time:"10:30",type:"Consultation",status:"confirmed",token:4},
+    {id:"APT-1051",patient:"Ramesh Yadav",doctor:"Dr. Anika Patel",dept:"Neurology",time:"11:00",type:"New",status:"confirmed",token:5},
+    {id:"APT-1052",patient:"Sita Kumari",doctor:"Dr. Karan Malhotra",dept:"Emergency",time:"11:30",type:"Emergency",status:"cancelled",token:6}
+  ];
+  labs=[
+    {id:"LAB-8821",patient:"Arjun Mehta",test:"CBC + Lipid Profile",collected:"07:30",status:"verified",priority:"routine",result:"Within range"},
+    {id:"LAB-8822",patient:"Vijay Singh",test:"Troponin I, CK-MB",collected:"08:15",status:"critical",priority:"urgent",result:"8.4 ng/mL ↑↑"},
+    {id:"LAB-8823",patient:"Neha Kapoor",test:"Blood Culture ×3",collected:"06:00",status:"pending",priority:"urgent",result:"Processing"},
+    {id:"LAB-8824",patient:"Rohan Gupta",test:"CSF Analysis",collected:"09:00",status:"in-progress",priority:"stat",result:"Processing"},
+    {id:"LAB-8825",patient:"Kavya Reddy",test:"Thyroid Profile",collected:"08:45",status:"verified",priority:"routine",result:"Within range"},
+    {id:"LAB-8826",patient:"Sunita Verma",test:"Wound Swab C/S",collected:"10:00",status:"pending",priority:"routine",result:"Pending"}
+  ];
+  meds=[
+    {id:"MED-001",name:"Amoxicillin 500mg",cat:"Antibiotic",stock:1240,reorder:500,unit:"caps",status:"adequate",price:8.5},
+    {id:"MED-002",name:"Metformin 850mg",cat:"Antidiabetic",stock:89,reorder:200,unit:"tabs",status:"low",price:5.2},
+    {id:"MED-003",name:"Atorvastatin 20mg",cat:"Lipid lowering",stock:654,reorder:300,unit:"tabs",status:"adequate",price:12},
+    {id:"MED-004",name:"Heparin 5000 IU/mL",cat:"Anticoagulant",stock:42,reorder:100,unit:"vials",status:"critical",price:185},
+    {id:"MED-005",name:"Normal Saline 500mL",cat:"IV Fluid",stock:320,reorder:200,unit:"bags",status:"adequate",price:35},
+    {id:"MED-006",name:"Morphine 10mg/mL",cat:"Analgesic",stock:0,reorder:50,unit:"amps",status:"out-of-stock",price:95}
+  ];
+  invoices=[
+    {id:"INV-7741",patient:"Arjun Mehta",amount:45800,paid:45800,date:"08 Jul",type:"IPD",status:"paid"},
+    {id:"INV-7742",patient:"Sunita Verma",amount:182500,paid:100000,date:"07 Jul",type:"Surgery",status:"partial"},
+    {id:"INV-7743",patient:"Rohan Gupta",amount:98200,paid:0,date:"09 Jul",type:"Emergency",status:"pending"},
+    {id:"INV-7744",patient:"Kavya Reddy",amount:32600,paid:32600,date:"09 Jul",type:"Maternity",status:"paid"},
+    {id:"INV-7745",patient:"Vijay Singh",amount:215000,paid:50000,date:"10 Jul",type:"Cardiac",status:"partial"},
+    {id:"INV-7746",patient:"Neha Kapoor",amount:127400,paid:127400,date:"06 Jul",type:"ICU",status:"paid"}
+  ];
+  emps=[
+    {id:"EMP-101",name:"Dr. Priya Sharma",dept:"Cardiology",role:"Senior Consultant",status:"present",shift:"Morning"},
+    {id:"EMP-102",name:"Ramya Krishnan",dept:"Nursing",role:"Head Nurse",status:"present",shift:"Morning"},
+    {id:"EMP-103",name:"Suresh Babu",dept:"Radiology",role:"Radiographer",status:"on-leave",shift:"—"},
+    {id:"EMP-104",name:"Anita Pillai",dept:"Pharmacy",role:"Chief Pharmacist",status:"present",shift:"Morning"},
+    {id:"EMP-105",name:"Ramkumar R.",dept:"Administration",role:"Hospital Manager",status:"present",shift:"General"},
+    {id:"EMP-106",name:"Deepa Nair",dept:"Laboratory",role:"Lab Technician",status:"present",shift:"Morning"}
+  ];
+  wardZones=[
+    {id:"icu",label:"INTENSIVE CARE — FLOOR 3N",icon:"ph-heartbeat",accent:"#fb7185",rooms:[
+      {label:"Bay A",beds:[{id:"A1",status:"critical",p:{n:"Neha Kapoor",hr:118,spo2:89,dx:"Septic Shock"}},{id:"A2",status:"critical",p:{n:"Vijay Singh",hr:122,spo2:91,dx:"Acute MI"}},{id:"A3",status:"occupied",p:{n:"K. Rao",hr:98,spo2:94,dx:"ARDS"}},{id:"A4",status:"available"}]},
+      {label:"Bay B",beds:[{id:"B1",status:"critical",p:{n:"R. Gupta",hr:104,spo2:93,dx:"TBI"}},{id:"B2",status:"occupied",p:{n:"M. Das",hr:96,spo2:92,dx:"CHF"}},{id:"B3",status:"available"},{id:"B4",status:"maintenance"}]},
+      {label:"NICU",beds:[{id:"N1",status:"critical",p:{n:"Baby Sharma",hr:168,spo2:88,dx:"Preterm 28w"}},{id:"N2",status:"occupied",p:{n:"Baby Reddy",hr:148,spo2:96,dx:"Jaundice"}},{id:"N3",status:"available"},{id:"N4",status:"available"}]}
+    ]},
+    {id:"general",label:"GENERAL MEDICAL WARD — FLOOR 2",icon:"ph-bed",accent:"#60a5fa",rooms:[
+      {label:"Room 101",beds:[{id:"101A",status:"occupied",p:{n:"M. Sharma",hr:76,spo2:97,dx:"T2DM+HTN"}},{id:"101B",status:"occupied",p:{n:"R. Patel",hr:84,spo2:98,dx:"Viral Fever"}},{id:"101C",status:"available"},{id:"101D",status:"occupied",p:{n:"V. Joshi",hr:92,spo2:91,dx:"COPD"}}]},
+      {label:"Room 102",beds:[{id:"102A",status:"occupied",p:{n:"S. Kumar",hr:78,spo2:99,dx:"Gastritis"}},{id:"102B",status:"occupied",p:{n:"V. Singh",hr:88,spo2:96,dx:"HTN Crisis"}},{id:"102C",status:"occupied",p:{n:"P. Nair",hr:110,spo2:95,dx:"AF"}},{id:"102D",status:"reserved"}]},
+      {label:"Room 103",beds:[{id:"103A",status:"occupied",p:{n:"A. Mehta",hr:96,spo2:97,dx:"Dengue"}},{id:"103B",status:"occupied",p:{n:"D. Rao",hr:80,spo2:95,dx:"CKD-4"}},{id:"103C",status:"reserved"},{id:"103D",status:"occupied",p:{n:"T. Iyer",hr:72,spo2:96,dx:"Post-Stroke"}}]}
+    ]},
+    {id:"surgical",label:"SURGICAL SUITE — FLOOR 1",icon:"ph-first-aid",accent:"#a78bfa",rooms:[
+      {label:"Operating Theatres",beds:[{id:"OT-1",status:"occupied",p:{n:"In Progress",hr:88,spo2:99,dx:"Appendicectomy"}},{id:"OT-2",status:"available"},{id:"OT-3",status:"occupied",p:{n:"In Progress",hr:76,spo2:100,dx:"THR R Hip"}}]},
+      {label:"Recovery",beds:[{id:"R1",status:"occupied",p:{n:"K. Sharma",hr:82,spo2:98,dx:"Post-CABG"}},{id:"R2",status:"occupied",p:{n:"L. Mehta",hr:86,spo2:99,dx:"Post-Lap"}},{id:"R3",status:"available"},{id:"R4",status:"available"}]}
+    ]}
+  ];
+
+  STATUS = {
+    critical:["Critical","#fb7185"], stable:["Stable","#34d399"], recovering:["Recovering","#2dd4bf"],
+    "post-op":["Post-op","#a78bfa"], verified:["Verified","#34d399"], pending:["Pending","#fbbf24"],
+    "in-progress":["In Progress","#60a5fa"], cancelled:["Cancelled","#fb7185"], confirmed:["Confirmed","#34d399"],
+    waiting:["Waiting","#fbbf24"], available:["Available","#34d399"], occupied:["Occupied","#60a5fa"],
+    adequate:["Adequate","#34d399"], low:["Low Stock","#fbbf24"], "out-of-stock":["Out of Stock","#fb7185"],
+    paid:["Paid","#34d399"], partial:["Partial","#fbbf24"], present:["Present","#34d399"], "on-leave":["On Leave","#fbbf24"],
+    "on-call":["On Call","#60a5fa"], "in-consultation":["Consulting","#fbbf24"], busy:["Busy","#fb7185"],
+    urgent:["Urgent","#fbbf24"], stat:["STAT","#fb7185"], routine:["Routine","#8493ab"]
+  };
+  BEDC = { critical:"#fb7185", occupied:"#60a5fa", available:"#34d399", reserved:"#fbbf24", maintenance:"#8493ab" };
+  PAL = ["#6366f1","#2dd4bf","#a78bfa","#fb7185","#fbbf24","#60a5fa"];
+
+  initials(n){ return n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase(); }
+  hex(v,lo){ return v>lo? "#fb7185" : "var(--text)"; }
+  spoColor(v){ return v<92? "#fb7185" : v<95? "#fbbf24" : "var(--text)"; }
+  tint(hex){ return hex+"26"; }
+
+  areaPath(vals,w,h,pad,close){
+    const mn=Math.min(...vals),mx=Math.max(...vals),n=vals.length;
+    const xs=i=>pad+i/(n-1)*(w-2*pad), ys=v=>(h-pad)-(v-mn)/((mx-mn)||1)*(h-2*pad);
+    let d="M"+xs(0).toFixed(1)+" "+ys(vals[0]).toFixed(1);
+    for(let i=1;i<n;i++) d+=" L"+xs(i).toFixed(1)+" "+ys(vals[i]).toFixed(1);
+    if(close) d+=" L"+xs(n-1).toFixed(1)+" "+h+" L"+xs(0).toFixed(1)+" "+h+" Z";
+    return d;
+  }
+
+  send(){
+    const v=(this.state.aiInput||"").trim(); if(!v) return;
+    this.setState(s=>({aiInput:"", aiMsgs:[...s.aiMsgs,{role:"user",text:v},{role:"bot",text:"Analysing… In production this returns a live, EHR-grounded clinical response with source citations."}]}));
+  }
+
+  buildTable(mod){
+    const P=(status)=>{const s=this.STATUS[status]||[status,"#8493ab"];return {isPill:true,text:s[0],fg:s[1],bg:s[1]+"22",align:"left"};};
+    const T=(text,o={})=>({isText:true,text,align:o.align||"left",weight:o.weight||500,cls:o.mono?"mono":"",hasSub:!!o.sub,sub:o.sub||""});
+    if(mod==="appointments") return {title:"Appointments",subtitle:"Today's OPD schedule · 6 tokens",action:"Book Slot",
+      cols:[{label:"Token",align:"left"},{label:"Patient",align:"left"},{label:"Doctor",align:"left"},{label:"Time",align:"left"},{label:"Type",align:"left"},{label:"Status",align:"left"}],
+      rows:this.appts.map(a=>({cells:[T("#"+a.token,{mono:true,weight:700}),T(a.patient,{weight:600,sub:a.id}),T(a.doctor,{sub:a.dept}),T(a.time,{mono:true}),T(a.type),P(a.status)]}))};
+    if(mod==="laboratory") return {title:"Laboratory",subtitle:"Sample tracking · 6 active",action:"New Order",
+      cols:[{label:"Sample",align:"left"},{label:"Patient",align:"left"},{label:"Test",align:"left"},{label:"Collected",align:"left"},{label:"Result",align:"left"},{label:"Status",align:"left"}],
+      rows:this.labs.map(l=>({cells:[T(l.id,{mono:true,weight:600}),T(l.patient,{weight:600}),T(l.test),T(l.collected,{mono:true}),T(l.result,{weight:600}),P(l.status)]}))};
+    if(mod==="pharmacy") return {title:"Pharmacy",subtitle:"Drug inventory · reorder monitoring",action:"Add Drug",
+      cols:[{label:"Medicine",align:"left"},{label:"Category",align:"left"},{label:"Stock Level",align:"left"},{label:"Unit Price",align:"right"},{label:"Status",align:"left"}],
+      rows:this.meds.map(m=>({cells:[T(m.name,{weight:600,sub:m.id}),T(m.cat),{isBar:true,align:"left",text:m.stock+" "+m.unit,pct:Math.min(100,m.stock/(m.reorder*5)*100)+"%",barColor:m.stock<m.reorder?"var(--warn)":"var(--ok)"},T("₹"+m.price.toFixed(2),{mono:true,align:"right"}),P(m.status)]}))};
+    if(mod==="billing") return {title:"Billing",subtitle:"Invoices · ₹7.02L billed today",action:"New Invoice",
+      cols:[{label:"Invoice",align:"left"},{label:"Patient",align:"left"},{label:"Type",align:"left"},{label:"Amount",align:"right"},{label:"Paid",align:"right"},{label:"Status",align:"left"}],
+      rows:this.invoices.map(i=>({cells:[T(i.id,{mono:true,weight:600}),T(i.patient,{weight:600,sub:i.date}),T(i.type),T("₹"+i.amount.toLocaleString("en-IN"),{mono:true,align:"right"}),T("₹"+i.paid.toLocaleString("en-IN"),{mono:true,align:"right"}),P(i.status)]}))};
+    if(mod==="hrms") return {title:"HRMS",subtitle:"Staff directory · 6 shown · 280 total",action:"Add Staff",
+      cols:[{label:"Employee",align:"left"},{label:"Department",align:"left"},{label:"Role",align:"left"},{label:"Shift",align:"left"},{label:"Status",align:"left"}],
+      rows:this.emps.map(e=>({cells:[T(e.name,{weight:600,sub:e.id}),T(e.dept),T(e.role),T(e.shift,{mono:true}),P(e.status)]}))};
+    if(mod==="doctors") return {title:"Doctors",subtitle:"Consultant roster · 6 on duty",action:"Add Doctor",
+      cols:[{label:"Doctor",align:"left"},{label:"Specialization",align:"left"},{label:"Patients",align:"right"},{label:"Rating",align:"right"},{label:"Status",align:"left"}],
+      rows:this.doctors.map(d=>({cells:[T(d.name,{weight:600,sub:d.id}),T(d.spec,{sub:d.exp+" yrs exp"}),T(String(d.patients),{mono:true,align:"right"}),T("★ "+d.rating,{align:"right",weight:600}),P(d.status)]}))};
+    if(mod==="opd") return {title:"OPD Queue",subtitle:"Outpatient consultations · live tokens",action:"New Token",
+      cols:[{label:"Token",align:"left"},{label:"Patient",align:"left"},{label:"Doctor",align:"left"},{label:"Time",align:"left"},{label:"Type",align:"left"},{label:"Status",align:"left"}],
+      rows:this.appts.map(a=>({cells:[T("#"+a.token,{mono:true,weight:700}),T(a.patient,{weight:600,sub:a.id}),T(a.doctor,{sub:a.dept}),T(a.time,{mono:true}),T(a.type),P(a.status)]}))};
+    if(mod==="ipd") return {title:"IPD — Inpatients",subtitle:"Admitted patients · 247 active",action:"Admit Patient",
+      cols:[{label:"Patient",align:"left"},{label:"Location",align:"left"},{label:"Diagnosis",align:"left"},{label:"Attending",align:"left"},{label:"Status",align:"left"}],
+      rows:this.patients.map(p=>({cells:[T(p.name,{weight:600,sub:p.id}),T(p.ward,{sub:"Bed "+p.bed}),T(p.diagnosis),T(p.doctor),P(p.status)]}))};
+    if(mod==="emergency") return {title:"Emergency & Triage",subtitle:"ER + ICU active cases",action:"Register",
+      cols:[{label:"Patient",align:"left"},{label:"Triage",align:"left"},{label:"HR",align:"right"},{label:"SpO₂",align:"right"},{label:"Diagnosis",align:"left"}],
+      rows:this.patients.filter(p=>p.ward==="Emergency"||p.ward==="ICU"||p.status==="critical").map(p=>({cells:[T(p.name,{weight:600,sub:p.id}),P(p.status),T(String(p.hr),{mono:true,align:"right"}),T(p.spo2+"%",{mono:true,align:"right"}),T(p.diagnosis)]}))};
+    if(mod==="radiology") return {title:"Radiology — Imaging",subtitle:"Scan orders & reports",action:"New Order",
+      cols:[{label:"Order",align:"left"},{label:"Patient",align:"left"},{label:"Study",align:"left"},{label:"Requested",align:"left"},{label:"Status",align:"left"}],
+      rows:this.labs.map(l=>({cells:[T(l.id.replace("LAB","RAD"),{mono:true,weight:600}),T(l.patient,{weight:600}),T(l.test),T(l.collected,{mono:true}),P(l.status)]}))};
+    if(mod==="bloodbank"){ const bb=[["O+",42,"adequate"],["A+",28,"adequate"],["B+",15,"low"],["AB+",6,"low"],["O-",9,"low"],["A-",3,"out-of-stock"]];
+      return {title:"Blood Bank",subtitle:"Stock by group · units available",action:"Add Donation",
+      cols:[{label:"Group",align:"left"},{label:"Units",align:"left"},{label:"Status",align:"left"}],
+      rows:bb.map(([g,u,s])=>({cells:[T(g,{mono:true,weight:700}),{isBar:true,align:"left",text:u+" units",pct:Math.min(100,u/50*100)+"%",barColor:u<12?"var(--warn)":"var(--ok)"},P(s)]}))}; }
+    return {title:"Inventory",subtitle:"Assets & consumables",action:"Add Item",
+      cols:[{label:"Item",align:"left"},{label:"Category",align:"left"},{label:"Stock",align:"left"},{label:"Status",align:"left"}],
+      rows:this.meds.map(m=>({cells:[T(m.name,{weight:600,sub:m.id}),T(m.cat),{isBar:true,align:"left",text:m.stock+" "+m.unit,pct:Math.min(100,m.stock/(m.reorder*5)*100)+"%",barColor:m.stock<m.reorder?"var(--warn)":"var(--ok)"},P(m.status)]}))};
+  }
+
+  renderVals(){
+    const mod = this.props.mod || "dashboard";
+    const tableMods = ["appointments","laboratory","pharmacy","billing","hrms","doctors","inventory","opd","ipd","emergency","radiology","bloodbank"];
+    const flags = { isDash:mod==="dashboard", isPatients:mod==="patients", isWard:mod==="ward",
+      isAI:mod==="ai", isReports:mod==="reports", isSettings:mod==="settings", isTable:tableMods.includes(mod) };
+
+    // dashboard charts
+    const adm=[62,78,91,85,103,74,58];
+    const admLine=this.areaPath(adm,240,44,4,false), admArea=this.areaPath(adm,240,44,4,true);
+    const dashAdmLine=this.areaPath(adm,560,150,10,false), dashAdmArea=this.areaPath(adm,560,150,10,true);
+    const depts=[["Cardiology",285],["Ortho",198],["Neuro",167],["Gynae",142],["Paeds",118],["Emerg",95]];
+    const dmax=285;
+    const deptBars=depts.map(([dept,v])=>({dept,label:"₹"+v+"K",pct:(v/dmax*100).toFixed(0)+"%"}));
+
+    const critical=this.patients.filter(p=>p.status==="critical").map(p=>({name:p.name,initials:this.initials(p.name),diagnosis:p.diagnosis,ward:p.ward,hr:p.hr,spo2:p.spo2+"%",color:this.PAL[p.name.charCodeAt(0)%6]}));
+    const feed=[
+      {text:"Lab verified — Arjun Mehta (CBC + Lipid)",time:"2 min ago",icon:"ph-flask",color:"#34d399",bg:"#34d39922"},
+      {text:"New ER admission — Vijay Singh, Acute MI",time:"14 min ago",icon:"ph-first-aid",color:"#fb7185",bg:"#fb718522"},
+      {text:"OT-1 Appendicectomy in progress",time:"28 min ago",icon:"ph-heartbeat",color:"#a78bfa",bg:"#a78bfa22"},
+      {text:"Pharmacy alert — Morphine out of stock",time:"41 min ago",icon:"ph-pill",color:"#fbbf24",bg:"#fbbf2422"},
+      {text:"Discharge approved — Amit Joshi",time:"1 hr ago",icon:"ph-check-circle",color:"#60a5fa",bg:"#60a5fa22"}
+    ];
+
+    // patients
+    const q=(this.state.search||"").toLowerCase();
+    const fmap={all:"All",critical:"Critical",stable:"Stable","post-op":"Post-op"};
+    const filters=Object.keys(fmap).map(k=>({label:fmap[k],onClick:()=>this.setState({filter:k}),
+      bg:this.state.filter===k?"var(--grad)":"transparent", fg:this.state.filter===k?"#fff":"var(--muted)"}));
+    let pts=this.patients;
+    if(this.state.filter!=="all") pts=pts.filter(p=>p.status===this.state.filter);
+    if(q) pts=pts.filter(p=>(p.name+p.id+p.ward+p.diagnosis).toLowerCase().includes(q));
+    const patients=pts.map(p=>{const s=this.STATUS[p.status]||[p.status,"#8493ab"];return {
+      ...p, initials:this.initials(p.name), color:this.PAL[p.name.charCodeAt(0)%6],
+      statusLabel:s[0], pillFg:s[1], pillBg:s[1]+"22",
+      hrColor:p.hr>100?"#fb7185":"var(--text)", spo2Color:this.spoColor(p.spo2), onClick:()=>{}
+    };});
+
+    // ward
+    const ward=this.wardZones.map(z=>{
+      let tot=0,free=0;
+      const rooms=z.rooms.map(rm=>({label:rm.label,beds:rm.beds.map(b=>{
+        tot++; if(b.status==="available")free++;
+        const c=this.BEDC[b.status]||"#8493ab";
+        return {id:b.id, bg:c+"1f", bd:c+"55", fg:c, shadow:"0 8px 16px -10px "+c+"66",
+          icon:b.status==="available"?"ph-bed":b.status==="maintenance"?"ph-wrench":b.status==="reserved"?"ph-clock":"ph-user",
+          mini:b.p?b.p.spo2:"", tip:b.p?(b.p.n+" · "+b.p.dx+" · HR "+b.p.hr+" · SpO₂ "+b.p.spo2+"%"):(b.status==="available"?"Available bed":b.status)};
+      })}));
+      return {label:z.label,icon:z.icon,accent:z.accent,headBg:z.accent+"14",occ:(tot-free)+"/"+tot+" occupied",rooms};
+    });
+
+    // ai
+    const aiMsgs=this.state.aiMsgs.map(m=>{const bot=m.role==="bot";return {
+      text:m.text, isBot:bot, justify:bot?"flex-start":"flex-end",
+      bg:bot?"var(--panel-2)":"var(--grad)", fg:bot?"var(--text)":"#fff", bd:bot?"var(--border)":"transparent"};});
+    const aiChips=["Critical patients summary","Drug interaction check","Today's OT schedule","Revenue breakdown"].map(l=>({label:l,onClick:()=>this.setState({aiInput:l})}));
+
+    // reports
+    const rev=[285,264,312,298,335,364,428], exp=[210,198,225,218,240,258,285];
+    const repRevLine=this.areaPath(rev,720,200,12,false), repRevArea=this.areaPath(rev,720,200,12,true);
+    const repExpLine=this.areaPath(exp,720,200,12,false);
+    const kpis=[
+      {label:"Revenue YTD",value:"₹2.29 Cr",delta:"▲ 18.4% vs 2024",color:"#34d399"},
+      {label:"Patients YTD",value:"14,950",delta:"▲ 12.1%",color:"#34d399"},
+      {label:"Avg Daily Adm.",value:"87",delta:"▲ 6 vs last mo.",color:"#34d399"},
+      {label:"Profit Margin",value:"22.4%",delta:"▼ 1.2%",color:"#fb7185"}
+    ];
+    const vol=[["Jan",1820],["Feb",1690],["Mar",2100],["Apr",1940],["May",2280],["Jun",2450],["Jul",2670]];
+    const vmax=2670;
+    const volBars=vol.map(([m,v])=>({m,h:(v/vmax*100).toFixed(0)+"%"}));
+    const dsplit=[["Cardiology",285],["Ortho",198],["Neuro",167],["Gynae",142],["Paeds",118],["Emerg",95]];
+    const dtot=dsplit.reduce((a,[,v])=>a+v,0); let acc=0;
+    const donut=dsplit.map(([dept,v],i)=>{const frac=v/dtot*100;const dash=frac.toFixed(2)+" "+(100-frac).toFixed(2);const offset=(25-acc).toFixed(2);acc+=frac;return {dept,label:Math.round(frac)+"%",color:this.PAL[i%6],dash,offset};});
+
+    // settings
+    const stabs=[["hospital","Hospital Info","ph-buildings"],["users","Users & Roles","ph-users-three"],["notifications","Notifications","ph-bell"],["integrations","Integrations","ph-globe"],["security","Security","ph-shield-check"],["appearance","Appearance","ph-palette"]];
+    const setTabs=stabs.map(([id,label,icon])=>({label,icon,onClick:()=>this.setState({settingsTab:id}),
+      bg:this.state.settingsTab===id?"var(--panel-2)":"transparent", fg:this.state.settingsTab===id?"var(--text)":"var(--muted)"}));
+    const cur=stabs.find(t=>t[0]===this.state.settingsTab)||stabs[0];
+    const fieldSets={
+      hospital:[["Hospital Name","Apollo MediCore Hospital"],["Registration No.","MH-HOS-2010-0847"],["NABH Accreditation","Valid till Dec 2026"],["Bed Capacity","280 beds"],["Emergency","24/7 Level 1 Trauma"],["Contact","+91 22 4800 7000"]],
+      users:[["Super Admin","Full access"],["Doctor","Clinical modules"],["Nurse","Ward + vitals"],["Pharmacist","Pharmacy"],["Lab Technician","Laboratory"],["Accountant","Billing"]],
+      notifications:[["Critical alerts","On"],["Lab results","On"],["Appt reminders","On"],["Stock alerts","On"],["Emergency escalations","On"],["Shift handover","Off"]],
+      integrations:[["HL7 FHIR v4","Connected"],["PACS Radiology","Connected"],["Payment Gateway","Connected"],["Lab Analyser API","Pending"],["ERP System","Pending"],["SMS Gateway","Connected"]],
+      security:[["2FA Enforcement","Enabled"],["Session Timeout","15 min"],["Password Policy","Strong"],["Audit Logging","Enabled"],["Data Encryption","AES-256"],["IP Allowlist","4 ranges"]],
+      appearance:[["Theme","System"],["Accent","Aurora Teal"],["Density","Comfortable"],["Language","English (IN)"],["Date Format","DD MMM YY"],["Currency","INR (₹)"]]
+    };
+    const setFields=(fieldSets[this.state.settingsTab]||[]).map(([label,value])=>({label,value}));
+
+    const tbl=flags.isTable? this.buildTable(mod): null;
+
+    return {
+      ...flags, mod,
+      admLine,admArea,dashAdmLine,dashAdmArea,deptBars,critical,feed,
+      search:this.state.search, filters, patients,
+      onSearch:e=>this.setState({search:e.target.value}),
+      ward,
+      aiMsgs,aiChips, aiInput:this.state.aiInput,
+      onAiInput:e=>this.setState({aiInput:e.target.value}),
+      onAiKey:e=>{ if(e.key==="Enter") this.send(); },
+      sendAi:()=>this.send(),
+      kpis,repRevLine,repRevArea,repExpLine,volBars,donut,
+      setTabs,setActiveLabel:cur[1],setActiveLower:cur[1].toLowerCase(),setFields,
+      tbl
+    };
+  }
+}
+</script>
+</body>
+</html>
