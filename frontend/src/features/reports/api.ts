@@ -32,17 +32,17 @@ export interface DateRangeParams {
 export const useManagementDashboard = (range: DateRangeParams) =>
   useQuery({ queryKey: ['dashboards', 'management', range], queryFn: () => get<ManagementDashboard>(d.management, range) })
 
-export const useOpDashboard = (range: DateRangeParams) =>
-  useQuery({ queryKey: ['dashboards', 'op', range], queryFn: () => get<OpDashboard>(d.op, range) })
+export const useOpDashboard = (range: DateRangeParams, enabled = true) =>
+  useQuery({ queryKey: ['dashboards', 'op', range], queryFn: () => get<OpDashboard>(d.op, range), enabled })
 
-export const useIpDashboard = (range: DateRangeParams) =>
-  useQuery({ queryKey: ['dashboards', 'ip', range], queryFn: () => get<IpDashboard>(d.ip, range) })
+export const useIpDashboard = (range: DateRangeParams, enabled = true) =>
+  useQuery({ queryKey: ['dashboards', 'ip', range], queryFn: () => get<IpDashboard>(d.ip, range), enabled })
 
-export const useBillingDashboard = (range: DateRangeParams) =>
-  useQuery({ queryKey: ['dashboards', 'billing', range], queryFn: () => get<BillingDashboard>(d.billing, range) })
+export const useBillingDashboard = (range: DateRangeParams, enabled = true) =>
+  useQuery({ queryKey: ['dashboards', 'billing', range], queryFn: () => get<BillingDashboard>(d.billing, range), enabled })
 
-export const useRevenueDashboard = (range: DateRangeParams) =>
-  useQuery({ queryKey: ['dashboards', 'revenue', range], queryFn: () => get<RevenueDashboard>(d.revenue, range) })
+export const useRevenueDashboard = (range: DateRangeParams, enabled = true) =>
+  useQuery({ queryKey: ['dashboards', 'revenue', range], queryFn: () => get<RevenueDashboard>(d.revenue, range), enabled })
 
 export const useReportCatalog = () =>
   useQuery({ queryKey: ['reports', 'catalog'], queryFn: () => get<ReportCatalogEntry[]>(r.catalog) })
