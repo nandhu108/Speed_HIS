@@ -135,15 +135,17 @@ public class RadOrderService(
     {
         var order = await db.RadOrders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id, ct)
             ?? throw new NotFoundException(nameof(RadOrder), id);
-        if (order.Items.Any(i => i.Status != RadOrderItemStatus.Ordered))
+        // Ordered or Scheduled (not yet scanned) items can be cancelled — e.g. a no-show; the slot is released.
+        if (order.Items.Any(i => i.Status is not (RadOrderItemStatus.Ordered or RadOrderItemStatus.Scheduled or RadOrderItemStatus.Cancelled)))
         {
-            throw new DomainException("A test has already been scheduled against this order — cancel the remaining items individually instead.");
+            throw new DomainException("A scan on this order has already been performed — cancel the remaining items individually instead.");
         }
 
         foreach (var item in order.Items)
         {
             item.Status = RadOrderItemStatus.Cancelled;
         }
+        await ReleaseSchedulesAsync(order.Items.Select(i => i.Id).ToList(), ct);
         order.Status = RadOrderStatus.Cancelled;
         order.CancelReason = request.Reason;
         order.CancelledAt = timeProvider.GetUtcNow();
@@ -157,14 +159,22 @@ public class RadOrderService(
         var order = await db.RadOrders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId, ct)
             ?? throw new NotFoundException(nameof(RadOrder), orderId);
         var item = order.Items.FirstOrDefault(i => i.Id == itemId) ?? throw new NotFoundException(nameof(RadOrderItem), itemId);
-        if (item.Status != RadOrderItemStatus.Ordered)
+        if (item.Status is not (RadOrderItemStatus.Ordered or RadOrderItemStatus.Scheduled))
         {
-            throw new DomainException("This test has already been scheduled — it can no longer be cancelled on its own.");
+            throw new DomainException($"A scan that is {item.Status} can no longer be cancelled.");
         }
 
         item.Status = RadOrderItemStatus.Cancelled;
+        await ReleaseSchedulesAsync([item.Id], ct);
         order.Status = RadMath.RecomputeOrderStatus(order.Items.Select(i => i.Status).ToList());
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Frees the modality slot of cancelled items (the schedule row is soft-deleted, kept for audit).</summary>
+    private async Task ReleaseSchedulesAsync(IReadOnlyCollection<long> itemIds, CancellationToken ct)
+    {
+        var schedules = await db.RadSchedules.Where(s => itemIds.Contains(s.RadOrderItemId)).ToListAsync(ct);
+        db.RadSchedules.RemoveRange(schedules); // converted to soft delete by the interceptor
     }
 
     // ── Scheduling ───────────────────────────────────────────────────────────

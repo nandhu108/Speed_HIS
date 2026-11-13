@@ -8105,6 +8105,10 @@ namespace Prixo.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("AdmissionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("admission_id");
+
                     b.Property<long>("BranchId")
                         .HasColumnType("bigint")
                         .HasColumnName("branch_id");
@@ -8187,6 +8191,9 @@ namespace Prixo.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_lab_orders");
+
+                    b.HasIndex("AdmissionId")
+                        .HasDatabaseName("ix_lab_orders_admission_id");
 
                     b.HasIndex("ClinicalOrderId")
                         .HasDatabaseName("ix_lab_orders_clinical_order_id");
@@ -19080,6 +19087,10 @@ namespace Prixo.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("batch_id");
 
+                    b.Property<long?>("BillItemId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("bill_item_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -24833,6 +24844,12 @@ namespace Prixo.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Prixo.Domain.Entities.Lab.LabOrder", b =>
                 {
+                    b.HasOne("Prixo.Domain.Entities.Ipd.Admission", "Admission")
+                        .WithMany()
+                        .HasForeignKey("AdmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_lab_orders_admissions_admission_id");
+
                     b.HasOne("Prixo.Domain.Entities.Admin.Branch", null)
                         .WithMany()
                         .HasForeignKey("BranchId")
@@ -24870,6 +24887,8 @@ namespace Prixo.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_lab_orders_patients_patient_id");
+
+                    b.Navigation("Admission");
 
                     b.Navigation("ClinicalOrder");
 

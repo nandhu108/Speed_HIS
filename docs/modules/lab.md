@@ -174,3 +174,14 @@ already had; no schema change. Radiology had the identical gap — see `docs/mod
 - TAT is computed from `LabOrder.OrderDate` (a `DateOnly`, midnight UTC) to
   `LabResult.ApprovedAt` — approximate by less than a day, since order date has no time
   component; documented rather than silently treated as precise.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **Billing gate:** OP lab orders (linked to an OP visit, not ER/IP) cannot have a sample collected until the test is on the bill and, by default, the bill is settled (`Billing.DiagnosticsGate`). This replaces the previous advisory-only posture.
+- **Inpatient orders:** `LabOrder.AdmissionId` (+ "Order lab test" on the admission page); IP tests charge to the IP bill.
+- **Orders:** unknown tests → 404; the same test twice in one order, or while an identical test is still awaiting collection for the patient, is rejected.
+- **Results:** numeric parameters must be numbers; negatives are refused where every reference range is non-negative.
+- Unbilled report defaults to the last 30 days when no dates are given.

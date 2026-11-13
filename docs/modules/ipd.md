@@ -170,3 +170,15 @@ ER→IP and OP→IP conversion reuse the existing `IPD.ADMISSION.CREATE` that al
 
 - `ipd.admissions` gained a nullable **`department_id`**; `AdmitPatientRequest.DepartmentId` is **mandatory** and must be an active Clinical department (same `DepartmentService.EnsureClinicalAsync` gate as OP registration — see "Department on OP registration" in `opd.md`). The migration backfills existing admissions from the primary consultant's first mapped department.
 - `AdmitPatientModal` (shared by Admissions, OP workspace, ER visit and Convert-to-IP) has a required Department select above Primary consultant; consultants narrow to that department's doctors plus unmapped doctors. `AdmissionDetailDto` returns `departmentId`/`departmentName`.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **One active admission per patient**; blocked patients cannot be admitted.
+- **Cancellation** is refused while an IP bill carries charges or payments (empty IP bills are cancelled with it).
+- **Discharge:** Billing clearance and final discharge require every IP bill settled (or a credit bill). Clearances are per department — `IPD.DISCHARGECLEAR.BILLING/PHARMACY/NURSING/INVESTIGATION` (endpoint gate `IPD.DISCHARGE.CLEARITEM`; `IPD.DISCHARGE.CLEAR` is an admin override, removed from Head Nurse by the migration).
+- **Discharge summary e-sign:** only a doctor, signing as themselves, who is the primary or an active consultant.
+- **Attribution:** progress notes, procedure notes, doctor orders and discharge requests must be in the caller's own name when the caller is a doctor (`ClinicalActor`).
+- **Validation:** medication orders need dose/route/frequency and end ≥ start; IP vitals ranges (SpO₂ ≤ 100, GCS 3–15, …); Doctor role may now raise admission requests.

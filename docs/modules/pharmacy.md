@@ -200,3 +200,17 @@ to `CreateSaleRequest` automatically on checkout, closing that traceability link
   known at physical receipt — so the user still fills those three fields per line from the
   actual delivery before posting. Verified end-to-end live: create PO → approve →
   Receive (GRN) → post → PO rolls to `Received` with the correct `ReceivedQuantity`.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **Expired stock:** GRN lines for medicines need an expiry after today; posting re-checks; FEFO allocation, batch availability, IP issues and OT usage skip/refuse expired batches (`StockMath.IsUsable`).
+- **MRP is tax-inclusive:** POS line total = MRP × qty − discount; GST is the included portion (`StockMath.ComputeMrpInclusiveLineAmounts`).
+- **Negative stock is impossible:** `StockLedgerWriter` refuses any movement that would take a batch below zero; adjustments are also checked at request time.
+- **Maker-checker:** the user who raised a stock adjustment cannot approve it.
+- **Returns:** sales and issue returns are limited cumulatively to the quantity sold/issued; a sale with returns cannot be cancelled; an IP issue return reduces the charged IP bill line.
+- **Prescription dispensing** checks the prescription belongs to the selected patient; unknown payment modes return 404 instead of 500.
+- **GRN:** MRP below purchase rate and receipts above the quantity still due on the PO are rejected. Concurrent sales lock candidate batch rows.
+- Speed Multi seeder now creates the branch's "Main Pharmacy" store (`SM-PHARM`).

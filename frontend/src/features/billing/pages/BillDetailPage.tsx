@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { errorMessage } from '../../../api/axios'
 import {
@@ -21,6 +21,7 @@ import { useCorporates, useDiscountTypes, usePackages, useServices } from '../..
 import {
   openBillReceipt,
   useAddBillItem,
+  useAddPendingOrders,
   useAddBillNote,
   useApplyBillDiscount,
   useApplyItemDiscount,
@@ -49,7 +50,7 @@ const statusTone: Record<BillStatus, 'success' | 'warning' | 'danger' | 'info' |
   5: 'warning',
 }
 
-/** Standalone route (`/billing/bills/:id`) — used by direct links (Bills list, Advances, etc.). */
+/** Standalone route (`/billing/bills/:id`) â€” used by direct links (Bills list, Advances, etc.). */
 export function BillDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -57,7 +58,7 @@ export function BillDetailPage() {
 }
 
 /**
- * The actual bill entry screen — extracted so OP Billing's multi-window tabs
+ * The actual bill entry screen â€” extracted so OP Billing's multi-window tabs
  * (`OpBillingSearchPage`) can embed it directly without a route change per tab, matching
  * Aosta's "OP BILL PAYMENT I/II/III" tabs where each tab keeps its own bill session.
  * `onBack` (only passed from within a tab) shows a "Back" action that returns to that tab's
@@ -74,7 +75,7 @@ export function BillWorkspace({
 }: {
   billId: number
   onBack?: () => void
-  /** Standalone-route usage's equivalent of `onBack` — a Back button in the PageHeader that
+  /** Standalone-route usage's equivalent of `onBack` â€” a Back button in the PageHeader that
    * navigates to this route, since a tab has no history to go back through (see PageHeader). */
   backTo?: string
   onCancelled?: () => void
@@ -98,6 +99,7 @@ export function BillWorkspace({
 
   const removeItem = useRemoveBillItem(billId)
   const unpark = useUnparkBill(billId)
+  const addPendingOrders = useAddPendingOrders(billId)
 
   const canManage = hasPermission('BILLING.BILL.MANAGE')
   const canCollect = hasPermission('BILLING.PAYMENT.COLLECT')
@@ -121,7 +123,7 @@ export function BillWorkspace({
     <>
       <PageHeader
         title={bill.billNumber}
-        subtitle={`${bill.patientName} (${bill.patientUhid}) · ${bill.billDate}`}
+        subtitle={`${bill.patientName} (${bill.patientUhid}) Â· ${bill.billDate}`}
         backTo={backTo}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -195,8 +197,8 @@ export function BillWorkspace({
               : 'bg-amber-50 text-amber-700'
           }`}
         >
-          IP credit limit {bill.creditLimit.toFixed(2)} · current exposure {(bill.creditExposure ?? 0).toFixed(2)}
-          {(bill.creditExposure ?? 0) > bill.creditLimit ? ' — exceeds the configured limit.' : ''}
+          IP credit limit {bill.creditLimit.toFixed(2)} Â· current exposure {(bill.creditExposure ?? 0).toFixed(2)}
+          {(bill.creditExposure ?? 0) > bill.creditLimit ? ' â€” exceeds the configured limit.' : ''}
         </p>
       )}
 
@@ -205,14 +207,14 @@ export function BillWorkspace({
           {bill.insuranceStatus.claimId != null ? (
             <>
               Insurance claim {bill.insuranceStatus.claimNumber} is {BILL_CLAIM_STATUS_LABELS[bill.insuranceStatus.claimStatus!]} for
-              this bill — confirm with the patient before collecting cash, so the bill isn't settled twice.
+              this bill â€” confirm with the patient before collecting cash, so the bill isn't settled twice.
             </>
           ) : (
             <>
               Insurance pre-authorization {bill.insuranceStatus.preAuthNumber} is{' '}
               {BILL_PRE_AUTH_STATUS_LABELS[bill.insuranceStatus.preAuthStatus!]}
               {bill.insuranceStatus.preAuthApprovedAmount != null ? ` (approved ${bill.insuranceStatus.preAuthApprovedAmount.toFixed(2)})` : ''} for
-              this encounter — confirm whether this should be billed cashless before collecting cash.
+              this encounter â€” confirm whether this should be billed cashless before collecting cash.
             </>
           )}
         </p>
@@ -229,6 +231,24 @@ export function BillWorkspace({
       <div className="mb-6 rounded-lg border border-slate-200 bg-white">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-800">Line Items</h2>
+          {canManage && bill.status !== 4 && bill.status !== 5 && (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                loading={addPendingOrders.isPending}
+                onClick={async () => {
+                  setError(null)
+                  try {
+                    await addPendingOrders.mutateAsync(undefined)
+                  } catch (err) {
+                    setError(errorMessage(err))
+                  }
+                }}
+              >
+                Add pending lab/radiology orders
+              </Button>
+            </div>
+          )}
           {canManage && editable && (
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setDiscountingBill(true)}>
@@ -259,7 +279,7 @@ export function BillWorkspace({
                 <td className="px-4 py-2.5 text-right text-slate-700">{item.quantity}</td>
                 <td className="px-4 py-2.5 text-right text-slate-700">{item.rate.toFixed(2)}</td>
                 <td className="px-4 py-2.5 text-right text-slate-700">
-                  {item.discountAmount > 0 ? `${item.discountPercent}% (${item.discountAmount.toFixed(2)})` : '—'}
+                  {item.discountAmount > 0 ? `${item.discountPercent}% (${item.discountAmount.toFixed(2)})` : 'â€”'}
                 </td>
                 <td className="px-4 py-2.5 text-right text-slate-700">{item.taxAmount.toFixed(2)}</td>
                 <td className="px-4 py-2.5 text-right font-medium text-slate-800">{item.totalAmount.toFixed(2)}</td>
@@ -322,7 +342,7 @@ export function BillWorkspace({
               <tr key={payment.id} className="border-b border-slate-100 last:border-0">
                 <td className="px-4 py-2.5 font-mono text-xs text-slate-500">{payment.receiptNumber}</td>
                 <td className="px-4 py-2.5 text-slate-700">{payment.paymentModeName}</td>
-                <td className="px-4 py-2.5 text-slate-700">{payment.referenceNumber ?? '—'}</td>
+                <td className="px-4 py-2.5 text-slate-700">{payment.referenceNumber ?? 'â€”'}</td>
                 <td className="px-4 py-2.5 text-right text-slate-700">{payment.amount.toFixed(2)}</td>
                 <td className="px-4 py-2.5 text-slate-700">{new Date(payment.paidAt).toLocaleString()}</td>
                 <td className="px-4 py-2.5 text-right">
@@ -408,7 +428,7 @@ function BillNotesSection({ billId, canManage }: { billId: number; canManage: bo
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         {canManage && (
           <div className="flex gap-2">
-            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a note…" className="flex-1" />
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add a noteâ€¦" className="flex-1" />
             <Button onClick={submit} loading={addNote.isPending} disabled={!note.trim()}>
               Add
             </Button>
@@ -426,7 +446,7 @@ function BillNotesSection({ billId, canManage }: { billId: number; canManage: bo
   )
 }
 
-/** Covers the legacy "Previous Outstanding" and "Previous Bill History" tabs in one panel —
+/** Covers the legacy "Previous Outstanding" and "Previous Bill History" tabs in one panel â€”
  * both are just filtered views of the same patient's other bills, so this reuses useBills
  * (already patient-scoped) rather than a second backend query. */
 function PreviousBillsSection({
@@ -564,7 +584,7 @@ function DrawAdvanceModal({
         {available.length === 0 && <p className="text-sm text-slate-500">This patient has no available advance balance.</p>}
         <Select
           label="Advance"
-          placeholder="Select…"
+          placeholder="Selectâ€¦"
           value={advanceId}
           onChange={(e) => setAdvanceId(e.target.value)}
           options={available.map((a) => ({ value: a.id, label: `Balance ${a.balanceAmount.toFixed(2)} (received ${new Date(a.receivedAt).toLocaleDateString()})` }))}
@@ -621,13 +641,13 @@ function ParkBillModal({ billId, onClose }: { billId: number; onClose: () => voi
 }
 
 /**
- * `MakeCreditBillAsync` accepts an optional Corporate to attribute the credit bill to — the
+ * `MakeCreditBillAsync` accepts an optional Corporate to attribute the credit bill to â€” the
  * backend fully supports it (`Bill.CorporateId`), but this used to be the only way to set it and
  * the button called it with a hardcoded `corporateId: null`, so a bill marked credit through the
  * UI could never carry a corporate. That silently broke the "Corporate Service Entry" legacy
  * mapping (this doc's Permissions table: "bill corporate/credit marking") and made the bill
  * permanently invisible to Finance's Receivables worklist, which requires a non-null
- * `CorporateId` (`ReceivableService.GetPendingBillsAsync`) — see the dated fix note in
+ * `CorporateId` (`ReceivableService.GetPendingBillsAsync`) â€” see the dated fix note in
  * docs/modules/billing.md. Corporate stays optional (a plain personal credit bill is still valid),
  * but it's now a real choice instead of a silent no-op.
  */
@@ -666,7 +686,7 @@ function MakeCreditBillModal({ billId, onClose }: { billId: number; onClose: () 
       {error && <p className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
       <Select
         label="Corporate (optional)"
-        placeholder="— None (personal credit) —"
+        placeholder="â€” None (personal credit) â€”"
         value={corporateId}
         onChange={(e) => setCorporateId(e.target.value)}
         options={corporates.map((c) => ({ value: c.id, label: c.name }))}
@@ -818,7 +838,7 @@ function AddItemModal({ billId, onClose }: { billId: number; onClose: () => void
         {sourceType === '3' ? (
           <Select
             label="Service"
-            placeholder="Select a service…"
+            placeholder="Select a serviceâ€¦"
             value={refId}
             onChange={(e) => setRefId(e.target.value)}
             options={(servicesResult?.items ?? []).map((s) => ({ value: s.id, label: s.name }))}
@@ -826,7 +846,7 @@ function AddItemModal({ billId, onClose }: { billId: number; onClose: () => void
         ) : (
           <Select
             label="Package"
-            placeholder="Select a package…"
+            placeholder="Select a packageâ€¦"
             value={refId}
             onChange={(e) => setRefId(e.target.value)}
             options={packages.map((p) => ({ value: p.id, label: p.name }))}
@@ -858,7 +878,7 @@ function DiscountFields({
     <div className="space-y-3">
       <Select
         label="Discount type (optional)"
-        placeholder="Ad-hoc discount…"
+        placeholder="Ad-hoc discountâ€¦"
         value={discountTypeId}
         onChange={(e) => setDiscountTypeId(e.target.value)}
         options={discountTypes.filter((t) => t.isActive).map((t) => ({ value: t.id, label: `${t.name} (max ${t.maxPercent}%)` }))}
@@ -900,7 +920,7 @@ function ItemDiscountModal({ billId, item, onClose }: { billId: number; item: Bi
   return (
     <Modal
       open
-      title={`Discount — ${item.description}`}
+      title={`Discount â€” ${item.description}`}
       onClose={onClose}
       footer={
         <>
@@ -1044,7 +1064,7 @@ function CollectPaymentModal({ billId, balance, onClose }: { billId: number; bal
           label="Payment mode"
           required
           error={fieldErrors.paymentModeId}
-          placeholder="Select…"
+          placeholder="Selectâ€¦"
           value={paymentModeId}
           onChange={(e) => setPaymentModeId(e.target.value)}
           options={modes.filter((m) => m.isActive).map((m) => ({ value: m.id, label: m.name }))}
@@ -1164,7 +1184,7 @@ function RequestRefundModal({
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <Select
           label="Against payment (optional)"
-          placeholder="Any payment on this bill…"
+          placeholder="Any payment on this billâ€¦"
           value={billPaymentId}
           onChange={(e) => setBillPaymentId(e.target.value)}
           options={payments.map((p) => ({ value: p.id, label: `${p.receiptNumber} (${p.amount.toFixed(2)})` }))}

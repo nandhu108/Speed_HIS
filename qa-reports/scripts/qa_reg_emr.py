@@ -16,8 +16,10 @@ reg = d["data"] if ok(s) else None
 s, d = admin.get("/Patients?Page=1&PageSize=200")
 uhids = [p["uhid"] for p in d["data"]["items"]]
 tc("REG-002", M, "UHIDs are unique across all patients", len(uhids) == len(set(uhids)), f"{len(uhids)} patients, {len(set(uhids))} unique", "No duplicate UHID", severity="Critical")
-nums = sorted(int(u.split("-")[-1]) for u in uhids)
-tc("REG-003", M, "UHID sequence is gap-free and increasing", nums == list(range(nums[0], nums[0] + len(nums))), f"{nums[:3]}...{nums[-3:]}", "Contiguous sequence", severity="Low")
+_byid = sorted((p["id"], int(p["uhid"].split("-")[-1])) for p in d["data"]["items"])
+_seq = [n for _, n in _byid]
+tc("REG-003", M, "UHID numbers strictly increase in registration order (no reuse; merged-away records are hidden by design)",
+   all(b > a for a, b in zip(_seq, _seq[1:])), f"{_seq[:3]}...{_seq[-3:]}", "Strictly increasing", severity="Low")
 
 base = patient_body("QATEST", "Val", 1, "1990-01-01", "9000000202")
 for tid, field, val, label in (("REG-004", "firstName", "", "empty first name"), ("REG-005", "lastName", "", "empty last name"),

@@ -50,7 +50,7 @@ public class ApplyItemDiscountRequestValidatorTests
 
     [Fact]
     public void ZeroPercent_NoDiscountType_Passes() =>
-        _validator.Validate(new ApplyItemDiscountRequest(null, 0, null)).IsValid.Should().BeTrue();
+        _validator.Validate(new ApplyItemDiscountRequest(null, 0, "Staff concession")).IsValid.Should().BeTrue();
 
     [Fact]
     public void HundredPercent_Passes() =>

@@ -292,10 +292,10 @@ export function PatientRegistrationWizard() {
       : [],
   })
 
-  const submitRegistration = async () => {
+  const submitRegistration = async (confirmDuplicate = false) => {
     setError(null)
     try {
-      const result = await register.mutateAsync(buildPayload())
+      const result = await register.mutateAsync({ ...buildPayload(), confirmDuplicate })
       if (photoFile) {
         // Best-effort — the patient record is already saved; a photo-upload hiccup shouldn't
         // block registration. Staff can add/retake it from the patient detail page afterwards.
@@ -845,7 +845,7 @@ export function PatientRegistrationWizard() {
           loading={register.isPending}
           onCancel={() => setDuplicates(null)}
           onProceed={async () => {
-            await submitRegistration()
+            await submitRegistration(true)
             setDuplicates(null)
           }}
         />

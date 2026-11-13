@@ -24,8 +24,12 @@ public class RadOrdersController(RadOrderService orders) : ApiControllerBase
     [HttpGet("unbilled-report")]
     [HasPermission(PermissionRegistry.RadReportView)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<UnbilledRadOrderRowDto>>>> GetUnbilledOrdersReport(
-        [FromQuery] DateOnly fromDate, [FromQuery] DateOnly toDate, CancellationToken ct) =>
-        OkResponse(await orders.GetUnbilledOrdersReportAsync(fromDate, toDate, ct));
+        [FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate, CancellationToken ct)
+    {
+        // Default window: the last 30 days up to today (a bare call used to return nothing).
+        var to = toDate ?? DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5.5));
+        return OkResponse(await orders.GetUnbilledOrdersReportAsync(fromDate ?? to.AddDays(-30), to, ct));
+    }
 
     [HttpGet("{id:long}")]
     [HasPermission(PermissionRegistry.RadOrderView)]

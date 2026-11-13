@@ -268,3 +268,10 @@ front-desk staff manually book, not every path that can produce an appointment.
   `NoShowMarkedAt` + one `IActivityLogger` entry per sweep rather than a per-row log table.
 - Appointment double-booking prevention is application-level (check-then-insert), not a DB
   constraint — matches the rest of the codebase's current concurrency posture.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- No past-date bookings; a *Booked* appointment must fall inside the doctor's schedule (walk-in/ER tokens exempt); check-in only on the appointment day (IST); blocked patients cannot book.

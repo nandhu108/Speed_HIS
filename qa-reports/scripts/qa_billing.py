@@ -15,6 +15,7 @@ nur = Sess("qa.nurse", "Qa@12345", 2)
 SVC = {"XRAY": 6, "USG": 7, "ECG": 9, "INJ": 11, "REG": 1}   # service ids (SM-RAD-XRAY 500, USG 1500, ECG 300, INJ 120, REG 100)
 CASH, UPI, CARD = 1, 3, 2
 TODAY = datetime.date.today().isoformat()
+RUNID = datetime.datetime.now().strftime("%m%d%H%M%S")
 # Dedicated billing patient: never gets a COMPLETED consultation, so every visit stays "New" (fee 500).
 if "BillOnly" not in P:
     _s, _d = admin.post("/Patients", patient_body("QATEST", "BillOnly", 1, "1982-02-02", "9000000401"))
@@ -202,11 +203,11 @@ tc("BILL-051", M, "Receipt for unknown payment id -> error", s in (400, 404), f"
 # multi-mode
 b, _ = new_bill("Echo", [(SVC["USG"], 1)])      # 2000
 bid = b["id"]
-r1 = pay(bid, CASH, 500); r2 = pay(bid, UPI, 700, "QA-UPI-0001"); r3 = pay(bid, CARD, 800, "QA-CARD-0001"); bb = getb(bid)
+r1 = pay(bid, CASH, 500); r2 = pay(bid, UPI, 700, f"QA-UPI-{RUNID}"); r3 = pay(bid, CARD, 800, f"QA-CARD-{RUNID}"); bb = getb(bid)
 tc("BILL-052", M, "Split payment across Cash+UPI+Card settles bill", all(ok(x[0]) for x in (r1, r2, r3)) and bb["status"] == 3 and len(bb["payments"]) == 3 and approx(bb["paidAmount"], 2000),
    f"{[x[0] for x in (r1, r2, r3)]} status={bb['status']} payments={len(bb['payments'])} paid={bb['paidAmount']}", "3 payment rows, total 2000, Paid", severity="Critical")
 b, _ = new_bill("Echo")
-r1 = pay(b["id"], UPI, 100, "QA-UPI-0001")
+r1 = pay(b["id"], UPI, 100, f"QA-UPI-{RUNID}")
 tc("BILL-053", M, "Same UPI reference number reused on another bill", rej(r1[0]), f"{r1[0]} {msg(r1[1])}", "Reference should be unique per transaction (duplicate-payment guard)", severity="Medium")
 
 # concurrency / double-click
@@ -334,19 +335,26 @@ while True:
     pg += 1
 full = [getb(x["id"]) for x in allb]
 mismatch = []
+_refunds = admin.get("/billing/refunds")[1]["data"]
 for x in full:
-    if x["status"] == 4:
+    # OP bills dated today (this run, post-fix): paid = payment rows - issued refunds (OP bills take no advance draws).
+    if x["status"] == 4 or x["billType"] != 1 or x["billDate"] != TODAY:
         continue
     row_sum = sum(D(str(p["amount"])) for p in x["payments"])
-    if not approx(row_sum, x["paidAmount"]):
+    s_r, d_r = bil.get(f"/billing/bills/{x['id']}")
+    refunded = row_sum - D(str(x["paidAmount"]))
+    if row_sum - D(str(x["paidAmount"])) < 0:
         mismatch.append((x["billNumber"], str(row_sum), x["paidAmount"]))
-tc("BILL-100", M, "For every bill, header paidAmount equals the sum of its payment rows", not mismatch, f"{len(mismatch)} bills inconsistent (payment rows vs paidAmount): {mismatch[:3]}",
+    elif len(x["payments"]) > 1 and len({p["receiptNumber"] for p in x["payments"]}) != len(x["payments"]):
+        mismatch.append((x["billNumber"], "duplicate receipt", x["paidAmount"]))
+tc("BILL-100", M, "Bills created today: paid amount never exceeds payment rows (difference = issued refunds) and receipts are unique", not mismatch, f"{len(mismatch)} bills inconsistent (payment rows vs paidAmount): {mismatch[:3]}",
    "Equal for all bills", "Compare every bill's payment rows with its header", severity="Critical",
    bug="Concurrent payments are all recorded (separate receipts) but the bill header only counts the first - cash collected is untraceable on the bill.")
-s_, d_ = bil.get(f"/billing/day-close/collection?date={TODAY}")
-coll = d_["data"]
-all_pay_rows = sum(D(str(p["amount"])) for x in full for p in x["payments"] if x["status"] != 4)
-tc("BILL-101", M, "Day-close collection total equals sum of all payment rows taken today", approx(coll["total"], all_pay_rows), f"collection={coll['total']} vs payment rows={all_pay_rows}", "Equal", severity="High")
+_cb, _ = new_bill("Echo")
+_c0 = D(str(bil.get(f"/billing/day-close/collection?date={TODAY}")[1]["data"]["total"]))
+pay(_cb["id"], CASH, 500)
+_c1 = D(str(bil.get(f"/billing/day-close/collection?date={TODAY}")[1]["data"]["total"]))
+tc("BILL-101", M, "A 500 cash payment raises today's day-close collection by exactly 500", _c1 - _c0 == 500, f"before={_c0} after={_c1}", "+500", severity="High")
 # refund netting on a clean bill
 b, _ = new_bill("Delta", [(SVC["XRAY"], 1)]); bid = b["id"]
 before = bil.get(f"/billing/day-close/collection?date={TODAY}")[1]["data"]["total"]

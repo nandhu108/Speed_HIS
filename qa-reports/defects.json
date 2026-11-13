@@ -8,7 +8,8 @@
   "steps": "Generate OP bill of 500 -> submit 4 'Collect payment 500 cash' requests simultaneously (double-click / two counters).",
   "expected": "Exactly one payment accepted; others rejected.",
   "actual": "All 4 accepted: 4 receipts (RCPT-...) for 2,000, bill paidAmount stays 500; 12 bills found with payment rows != paidAmount.",
-  "id": "BUG-001"
+  "id": "BUG-001",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -19,7 +20,8 @@
   "steps": "Pay 500 -> raise refund 300 -> raise refund 300 -> approve and issue both.",
   "expected": "Second refund rejected (total refunds <= paid).",
   "actual": "Both issued; bill paidAmount = -100.",
-  "id": "BUG-002"
+  "id": "BUG-002",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -30,7 +32,8 @@
   "steps": "GRN a batch with expiry 30 days in the past -> post GRN -> POS sale of that drug.",
   "expected": "GRN rejected or batch quarantined; sale refused.",
   "actual": "GRN created and posted; sale PSALE-... completed from the expired batch.",
-  "id": "BUG-003"
+  "id": "BUG-003",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -41,7 +44,8 @@
   "steps": "Receive batch with MRP 15 -> sell 10 units.",
   "expected": "Total <= 150 (GST contained within MRP).",
   "actual": "Sub-total 150 + GST 18 = 168 charged.",
-  "id": "BUG-004"
+  "id": "BUG-004",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -52,7 +56,8 @@
   "steps": "Sell 10 units -> return 3 -> return 8.",
   "expected": "Second return rejected (3 + 8 > 10).",
   "actual": "Both returns posted (11 units refunded against 10 sold).",
-  "id": "BUG-005"
+  "id": "BUG-005",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -63,7 +68,8 @@
   "steps": "Raise adjustment -100000 on a batch holding ~146 units -> approve.",
   "expected": "Rejected - on-hand cannot go below zero.",
   "actual": "Approved; batch on-hand became about -99,854 (QA reversed it afterwards).",
-  "id": "BUG-006"
+  "id": "BUG-006",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -74,7 +80,8 @@
   "steps": "POS sale for patient Bravo with prescriptionId belonging to patient Alpha.",
   "expected": "Rejected - prescription/patient mismatch.",
   "actual": "Sale completed.",
-  "id": "BUG-007"
+  "id": "BUG-007",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -85,7 +92,8 @@
   "steps": "Admit patient -> admit same patient again into another vacant bed.",
   "expected": "Rejected - patient has an active admission.",
   "actual": "Second admission created.",
-  "id": "BUG-008"
+  "id": "BUG-008",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -96,7 +104,8 @@
   "steps": "Admit (deposit 5000) -> add charges -> request discharge -> give Billing clearance while balance 8,500 -> finalize.",
   "expected": "Billing clearance and final discharge refused until the bill is settled.",
   "actual": "Clearance accepted with balance 8,500; IP-2026-000013 discharged with BILL-2026-000097 unpaid (paid 0).",
-  "id": "BUG-009"
+  "id": "BUG-009",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -107,7 +116,8 @@
   "steps": "Doctor B calls summary/approve with approvedByDoctorId = B, then = A (treating).",
   "expected": "Only the treating consultant, signing as themselves, can approve.",
   "actual": "Both calls succeeded.",
-  "id": "BUG-010"
+  "id": "BUG-010",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -118,7 +128,8 @@
   "steps": "Sign-In with siteMarked=false + complete=true; Sign-Out with instrument count NOT correct + complete=true.",
   "expected": "Step cannot be completed until every mandatory item is ticked.",
   "actual": "Both steps saved as complete; surgery can proceed/finish.",
-  "id": "BUG-011"
+  "id": "BUG-011",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -129,7 +140,8 @@
   "steps": "Complete consultation -> PUT a new prescription (5000 mg QID) and new diagnosis.",
   "expected": "Locked, or changed only via an addendum/correction trail.",
   "actual": "Both saved with 200.",
-  "id": "BUG-012"
+  "id": "BUG-012",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Critical",
@@ -140,7 +152,8 @@
   "steps": "OP visit -> lab APTT + CT Brain done end-to-end -> generate OP bill.",
   "expected": "Tests billed at tariff; processing requires billing.",
   "actual": "0/69 lab and 0/54 radiology tests map to a billing service; OP bill shows consultation only; doctor orders appear as 0.00 stub lines.",
-  "id": "BUG-013"
+  "id": "BUG-013",
+  "retest": "Code fixed; OPEN until hospital enters prices/rates (data)"
  },
  {
   "sev": "High",
@@ -151,7 +164,8 @@
   "steps": "Register OP visit -> cancel visit -> generate OP bill.",
   "expected": "Rejected.",
   "actual": "Bill created (e.g. BILL-2026-000070).",
-  "id": "BUG-014"
+  "id": "BUG-014",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -162,7 +176,8 @@
   "steps": "Pay 1000 cash -> refund 400 cash -> read day-close collection.",
   "expected": "Collection increases by net 600.",
   "actual": "Collection increased by 1000; full pay-and-refund still adds the full amount.",
-  "id": "BUG-015"
+  "id": "BUG-015",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -173,7 +188,8 @@
   "steps": "Doctor B calls start-consult / vitals on Doctor A's visit.",
   "expected": "Rejected (or explicit cover-doctor workflow).",
   "actual": "Accepted.",
-  "id": "BUG-016"
+  "id": "BUG-016",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -184,7 +200,8 @@
   "steps": "Reception GET /opd/visits/{id}/workspace.",
   "expected": "403 (billing role is correctly refused).",
   "actual": "200.",
-  "id": "BUG-017"
+  "id": "BUG-017",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -195,7 +212,8 @@
   "steps": "Doctor B posts a progress note with doctorId = Doctor A.",
   "expected": "Author = caller.",
   "actual": "Saved as Doctor A.",
-  "id": "BUG-018"
+  "id": "BUG-018",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -206,7 +224,8 @@
   "steps": "Doctor places Lab order on an admission -> check /lab/orders.",
   "expected": "Lab order created.",
   "actual": "Order-sheet entry only; no lab order (lab orders cannot carry an admissionId).",
-  "id": "BUG-019"
+  "id": "BUG-019",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -217,7 +236,8 @@
   "steps": "Issue 2 units to admission -> generate IP bill.",
   "expected": "Medicine line on IP bill.",
   "actual": "Bed charges only.",
-  "id": "BUG-020"
+  "id": "BUG-020",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -228,7 +248,8 @@
   "steps": "Admit to General Ward, transfer to Semi-Private -> generate IP bill.",
   "expected": "Room-type tariff applied.",
   "actual": "Rates 0.00 (ICU 7,500 correct).",
-  "id": "BUG-021"
+  "id": "BUG-021",
+  "retest": "Code fixed; OPEN until hospital enters prices/rates (data)"
  },
  {
   "sev": "High",
@@ -239,7 +260,8 @@
   "steps": "Admit -> generate IP bill -> cancel admission.",
   "expected": "Refused until bill cancelled/settled.",
   "actual": "Admission cancelled.",
-  "id": "BUG-022"
+  "id": "BUG-022",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -250,7 +272,8 @@
   "steps": "Head Nurse clears Pharmacy item; Billing user clears Billing item.",
   "expected": "Each department clears its own item only.",
   "actual": "Head Nurse allowed; Billing user 403.",
-  "id": "BUG-023"
+  "id": "BUG-023",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -261,7 +284,8 @@
   "steps": "Approve a radiology report -> EMR timeline/investigations/procedures.",
   "expected": "Report listed.",
   "actual": "Not present anywhere in EMR.",
-  "id": "BUG-024"
+  "id": "BUG-024",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -272,7 +296,8 @@
   "steps": "Enter 'abc' and '-5' for APTT.",
   "expected": "Rejected.",
   "actual": "Saved.",
-  "id": "BUG-025"
+  "id": "BUG-025",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -283,7 +308,8 @@
   "steps": "Medication order without dose / ending before start; vitals SpO2 140, Temp 150F, GCS 20; Morse item 999.",
   "expected": "Rejected.",
   "actual": "All saved (201).",
-  "id": "BUG-026"
+  "id": "BUG-026",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -294,7 +320,8 @@
   "steps": "Record implant usage with serialNumber=''.",
   "expected": "Rejected.",
   "actual": "Recorded.",
-  "id": "BUG-027"
+  "id": "BUG-027",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -305,7 +332,8 @@
   "steps": "Complete surgery -> generate IP bill.",
   "expected": "OT charge created by OT module.",
   "actual": "Only bed lines; OT hours keyed manually.",
-  "id": "BUG-028"
+  "id": "BUG-028",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -316,7 +344,8 @@
   "steps": "Open /pharmacy/stores in SPEED_MULTI.",
   "expected": ">= 1 pharmacy store.",
   "actual": "None (QA created 'QA Main Pharmacy' and a QA vendor to test).",
-  "id": "BUG-029"
+  "id": "BUG-029",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -327,7 +356,8 @@
   "steps": "Register a patient with the same name, DOB and mobile as an existing one.",
   "expected": "Blocked or duplicate warning requiring confirmation.",
   "actual": "New UHID created.",
-  "id": "BUG-030"
+  "id": "BUG-030",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "High",
@@ -338,7 +368,8 @@
   "steps": "Pharmacy Manager raises adjustment -> approves it.",
   "expected": "Self-approval refused.",
   "actual": "Approved.",
-  "id": "BUG-031"
+  "id": "BUG-031",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -349,7 +380,8 @@
   "steps": "Block patient -> register OP visit.",
   "expected": "Refused.",
   "actual": "Visit registered.",
-  "id": "BUG-032"
+  "id": "BUG-032",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -360,7 +392,8 @@
   "steps": "Register with gender 0; with DOB 30 days ahead.",
   "expected": "Rejected.",
   "actual": "UHIDs created.",
-  "id": "BUG-033"
+  "id": "BUG-033",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -371,7 +404,8 @@
   "steps": "Search 'QATEST Alpha'.",
   "expected": "Patient found.",
   "actual": "0 results ('Alpha' alone works).",
-  "id": "BUG-034"
+  "id": "BUG-034",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -382,7 +416,8 @@
   "steps": "Same test twice in one order; same test re-ordered while open; same scan twice.",
   "expected": "Blocked or warned.",
   "actual": "Accepted.",
-  "id": "BUG-035"
+  "id": "BUG-035",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -393,7 +428,8 @@
   "steps": "Lab order with unknown test; POS sale with unknown payment mode; radiology schedule time without timezone.",
   "expected": "4xx with a clear message.",
   "actual": "HTTP 500.",
-  "id": "BUG-036"
+  "id": "BUG-036",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -404,7 +440,8 @@
   "steps": "Schedule scan/OT/appointment in the past; appointment at 03:00 (schedule 08-20); check-in a day early.",
   "expected": "Rejected.",
   "actual": "All accepted.",
-  "id": "BUG-037"
+  "id": "BUG-037",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -415,7 +452,8 @@
   "steps": "Schedule two patients at the same modality minute; reschedule a scheduled item.",
   "expected": "Conflict blocked; reschedule allowed.",
   "actual": "Double-booked; reschedule refused.",
-  "id": "BUG-038"
+  "id": "BUG-038",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -426,7 +464,8 @@
   "steps": "Apply 5% bill discount with empty reason.",
   "expected": "Reason mandatory.",
   "actual": "Applied.",
-  "id": "BUG-039"
+  "id": "BUG-039",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -437,7 +476,8 @@
   "steps": "Collect UPI with ref QA-UPI-0001 on bill A and again on bill B.",
   "expected": "Second use rejected or flagged.",
   "actual": "Accepted.",
-  "id": "BUG-040"
+  "id": "BUG-040",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -448,7 +488,8 @@
   "steps": "Corporate limit 1,000 -> mark 2,000 bill as credit.",
   "expected": "Blocked or warned.",
   "actual": "Marked credit; no limit/exposure shown.",
-  "id": "BUG-041"
+  "id": "BUG-041",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -459,7 +500,8 @@
   "steps": "GRN with MRP 5 < cost 8; GRN of 9,999 against PO of 100.",
   "expected": "Rejected or warned.",
   "actual": "Accepted.",
-  "id": "BUG-042"
+  "id": "BUG-042",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -470,7 +512,8 @@
   "steps": "Doctor POST /ipd/admission-requests.",
   "expected": "Allowed.",
   "actual": "403 (role lacks IPD.ADMISSIONREQUEST.CREATE).",
-  "id": "BUG-043"
+  "id": "BUG-043",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Medium",
@@ -481,7 +524,8 @@
   "steps": "Start surgery (no IP bill yet) -> record consumable.",
   "expected": "Recorded; charge queued.",
   "actual": "400 'Generate the IP bill ... before recording usage'.",
-  "id": "BUG-044"
+  "id": "BUG-044",
+  "retest": "FIXED - verified by re-test"
  },
  {
   "sev": "Low",
@@ -492,6 +536,7 @@
   "steps": "Systolic < diastolic; follow-up date in past; UHID gap after rejected save; unbilled report without dates.",
   "expected": "Rejected / gap-free / defaults.",
   "actual": "Accepted / gap / empty list.",
-  "id": "BUG-045"
+  "id": "BUG-045",
+  "retest": "FIXED - verified by re-test"
  }
 ]

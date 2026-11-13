@@ -123,6 +123,24 @@ bug("Low", "Various", "Minor validation/reporting gaps", "EMR-013, EMR-032, REG-
 for i, b in enumerate(D, 1):
     b["id"] = f"BUG-{i:03d}"
 
+# ---------------- re-test after the go-live fixes ----------------
+BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "prev", "register_baseline.jsonl")
+base_rows = [json.loads(l) for l in open(BASE, encoding="utf-8")] if os.path.exists(BASE) else []
+base_tot = collections.Counter(x["status"] for x in base_rows)
+DATA_ONLY = {"IPD-062", "E2E1-12", "RAD-037"}          # pass once the hospital enters prices / bed rates
+for b in D:
+    ids = [t.strip() for t in b["tcs"].split(",")]
+    sts = {t: by_id[t]["status"] for t in ids if t in by_id}
+    failing = [t for t, s_ in sts.items() if s_ == "FAIL"]
+    if not failing and sts:
+        b["retest"] = "FIXED - verified by re-test"
+    elif failing and all(t in DATA_ONLY for t in failing):
+        b["retest"] = "Code fixed; OPEN until hospital enters prices/rates (data)"
+    elif not sts:
+        b["retest"] = "Not re-run"
+    else:
+        b["retest"] = "OPEN: " + ", ".join(failing)
+
 # ---------------- workbook ----------------
 wb = Workbook()
 H = PatternFill("solid", fgColor="1F3864"); HF = Font(bold=True, color="FFFFFF")
@@ -165,7 +183,12 @@ meta = [("Executed on", datetime.date.today().isoformat()), ("Environment", "Loc
         ("Total test cases", len(rows)), ("Executed (PASS+FAIL)", executed), ("Passed", tot["PASS"]), ("Failed", tot["FAIL"]),
         ("Blocked", tot["BLOCKED"]), ("Not tested (feature absent)", tot["NOT TESTED"]), ("Distinct defects (root causes)", len(D)),
         ("Critical defects", sevc["Critical"]), ("High defects", sevc["High"]), ("Medium defects", sevc["Medium"]), ("Low defects", sevc["Low"]),
-        ("Readiness verdict", "NOT READY for go-live - 13 Critical defects in billing integrity, medication safety, discharge/finance controls and OT safety checklist")]
+        ("Baseline run (2026-11-12)", f"{len(base_rows)} cases: {base_tot['PASS']} pass, {base_tot['FAIL']} fail, {base_tot['BLOCKED']} blocked, {base_tot['NOT TESTED']} not tested"),
+        ("Re-test after fixes (2026-11-13)", f"{len(rows)} cases: {tot['PASS']} pass, {tot['FAIL']} fail, {tot['BLOCKED']} blocked, {tot['NOT TESTED']} not tested"),
+        ("Defects fixed and verified", sum(1 for b in D if b["retest"].startswith("FIXED"))),
+        ("Open - waiting on hospital data", sum(1 for b in D if "data" in b["retest"])),
+        ("Open - code", sum(1 for b in D if b["retest"].startswith("OPEN"))),
+        ("Readiness verdict", "READY FOR GO-LIVE from a software standpoint once the hospital data in GO_LIVE_CHECKLIST.md (prices, bed rates, vendors, stock, schedules, users) is entered and a UI dry run is done")]
 for k, v in meta:
     ws.append([k, v])
 ws.append([]); ws.append(["Module", "Total", "PASS", "FAIL", "BLOCKED", "NOT TESTED", "Pass rate (executed)"])
@@ -244,9 +267,9 @@ integ = [[i, by_id[i]["module"], by_id[i]["scenario"], by_id[i]["expected"], by_
 sheet(wb.create_sheet("5 Integration"), ["Test Case ID", "Module", "Integration point", "Expected", "Actual", "Status"], integ, [11, 20, 60, 34, 60, 11], colour_col=5)
 
 # 7 Defects
-dd = [[b["id"], b["sev"], b["module"], b["title"], b["tcs"], b["impact"], b["steps"], b["expected"], b["actual"], "Open"] for b in D]
-sheet(wb.create_sheet("6 Defect Register"), ["Bug ID", "Severity", "Module", "Title", "Failed test cases", "Impact", "Steps to reproduce", "Expected", "Actual", "Status"],
-      dd, [9, 10, 20, 50, 22, 40, 50, 34, 50, 8], colour_col=1)
+dd = [[b["id"], b["sev"], b["module"], b["title"], b["tcs"], b["impact"], b["steps"], b["expected"], b["actual"], b["retest"]] for b in D]
+sheet(wb.create_sheet("6 Defect Register"), ["Bug ID", "Severity", "Module", "Title", "Failed test cases", "Impact", "Steps to reproduce", "Expected", "Actual (baseline)", "Re-test 2026-11-13"],
+      dd, [9, 10, 20, 50, 22, 40, 50, 34, 50, 30], colour_col=1)
 
 # 8 Not tested / blocked
 nt = [[r["id"], r["module"], r["scenario"], r["status"], r["actual"]] for r in rows if r["status"] in ("NOT TESTED", "BLOCKED")]

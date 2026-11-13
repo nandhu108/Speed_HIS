@@ -1,6 +1,6 @@
 export type BillType = 1 | 2 | 3 // Op, Ip, Emergency
 export type BillStatus = 1 | 2 | 3 | 4 | 5 // Open, PartiallyPaid, Paid, Cancelled, Parked
-export type BillItemSourceType = 1 | 2 | 3 | 4 // Consultation, ClinicalOrder, Service, Package
+export type BillItemSourceType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 // Consultation, ClinicalOrder, Service, Package, BedCharge, OtCharge, Pharmacy, LabTest, RadiologyTest
 export type RefundMethod = 1 | 2 // Cash, CreditNote
 export type RefundStatus = 1 | 2 | 3 | 4 // Pending, Approved, Rejected, Issued
 export type DiscountApprovalStatus = 1 | 2 | 3 | 4 // AutoApproved, Pending, Approved, Rejected
@@ -30,6 +30,11 @@ export const BILL_ITEM_SOURCE_LABELS: Record<BillItemSourceType, string> = {
   2: 'Clinical Order',
   3: 'Service',
   4: 'Package',
+  5: 'Bed Charge',
+  6: 'OT Charge',
+  7: 'Pharmacy',
+  8: 'Lab Test',
+  9: 'Radiology',
 }
 export const ONLINE_PAYMENT_REQUEST_STATUS_LABELS: Record<OnlinePaymentRequestStatus, string> = {
   0: 'Requested',

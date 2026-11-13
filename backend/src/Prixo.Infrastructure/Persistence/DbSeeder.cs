@@ -628,8 +628,10 @@ public class DbSeeder(
         await EnsureMenuAsync(opRegistration.Id, "New MHC Registration", "clipboard-plus", "/mhc", PermissionRegistry.MhcVisitCreate, 30, ct);
         await EnsureMenuAsync(opRegistration.Id, "MHC Review Registration", "clipboard-plus", "/mhc", PermissionRegistry.MhcVisitCreate, 40, ct);
         await EnsureMenuAsync(opRegistration.Id, "OP Registration Cancel", "x", "/opd/registration-utility", PermissionRegistry.VisitView, 50, ct);
-        await EnsureMenuAsync(opRegistration.Id, "OP Case Sheet Reprint-Direct", "printer", "/opd/registration-utility", PermissionRegistry.VisitView, 60, ct);
-        await EnsureMenuAsync(opRegistration.Id, "OP Casesheet Reprint-Preview", "printer", "/opd/registration-utility", PermissionRegistry.VisitView, 70, ct);
+        // The two legacy "Reprint-Direct/Preview" entries were removed at the hospital's request
+        // (they duplicated "OP Registration Cancel", same page) — retire them on existing databases.
+        await RetireMenuAsync("/opd/registration-utility::OP Case Sheet Reprint-Direct", ct);
+        await RetireMenuAsync("/opd/registration-utility::OP Casesheet Reprint-Preview", ct);
 
         var ipRegistration = await EnsureMenuAsync(null, "IP Registration", "bed", "/ipd/admissions", PermissionRegistry.AdmissionView, 20, ct);
         await EnsureRoleMenuLayoutAsync(frontOfficeRole.Id, ipRegistration.Id, foRegistration.Id, 30, ct);
@@ -760,6 +762,17 @@ public class DbSeeder(
             await db.SaveChangesAsync(ct);
         }
         return menu;
+    }
+
+    /// <summary>Soft-deletes a previously seeded menu item (by its stable Code), if present.</summary>
+    private async Task RetireMenuAsync(string code, CancellationToken ct)
+    {
+        var menu = await db.Menus.FirstOrDefaultAsync(m => m.Code == code, ct);
+        if (menu is not null)
+        {
+            db.Menus.Remove(menu); // converted to soft delete by the audit interceptor
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     /// <summary>

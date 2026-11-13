@@ -5,6 +5,7 @@ using Prixo.Application.Common.Interfaces;
 using Prixo.Domain.Entities.Admin;
 using Prixo.Domain.Entities.Masters;
 using Prixo.Domain.Entities.Ot;
+using Prixo.Domain.Entities.Pharmacy;
 using Prixo.Domain.Enums;
 
 namespace Prixo.Infrastructure.Persistence;
@@ -42,6 +43,7 @@ public class SpeedMultiSeeder(
         await SeedWardsAndBedsAsync(branch, ct);
         await SeedServicesAndTariffAsync(branch, departments, ct);
         await SeedTheatreAsync(branch, ct);
+        await SeedPharmacyStoreAndSettingsAsync(branch, ct);
         logger.LogInformation("Speed Multi seed completed for branch {Branch}", BranchCode);
     }
 
@@ -413,6 +415,28 @@ public class SpeedMultiSeeder(
             }
         }
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Go-live essentials that need no hospital price data: the branch's main pharmacy store (without
+    /// one, no purchase/GRN/sale/IP issue is possible) and the OT-time charge mapping to the
+    /// workbook's "OT charge (per hour)" service. Vendors and drug prices are hospital data and are
+    /// entered from the masters screens, not invented here.
+    /// </summary>
+    private async Task SeedPharmacyStoreAndSettingsAsync(Branch branch, CancellationToken ct)
+    {
+        if (!await db.Stores.IgnoreQueryFilters().AnyAsync(s => s.BranchId == branch.Id && s.Code == "SM-PHARM" && !s.IsDeleted, ct))
+        {
+            db.Stores.Add(new Store { BranchId = branch.Id, Code = "SM-PHARM", Name = "Main Pharmacy", StoreType = StoreType.Pharmacy, IsDefault = true });
+            await db.SaveChangesAsync(ct);
+        }
+
+        var otSetting = await db.SystemSettings.FirstOrDefaultAsync(x => x.Key == "Ot.HourlyChargeServiceCode", ct);
+        if (otSetting is not null && string.IsNullOrWhiteSpace(otSetting.Value))
+        {
+            otSetting.Value = "SM-OT-HOUR";
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     private async Task SeedTheatreAsync(Branch branch, CancellationToken ct)

@@ -11,6 +11,7 @@ public enum TimelineEventType
     DischargeSummary = 6,
     ClinicalNote = 7,
     Attachment = 8,
+    RadiologyReport = 9,
 }
 
 public record TimelineEventDto(DateTimeOffset At, TimelineEventType Type, string Title, string Summary, long LinkId);

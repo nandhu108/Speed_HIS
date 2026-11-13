@@ -62,7 +62,8 @@ public record RegisterPatientRequest(
     bool IsVip, bool SmsOptIn, bool InsuranceRequired, string? Remarks,
     long? PatientCategoryId, long? ReferrerId,
     IReadOnlyList<SavePatientContactRequest> Contacts, IReadOnlyList<SavePatientIdentifierRequest> Identifiers,
-    IReadOnlyList<SavePatientInsurancePolicyRequest> InsurancePolicies);
+    IReadOnlyList<SavePatientInsurancePolicyRequest> InsurancePolicies,
+    bool ConfirmDuplicate = false);
 
 public record UpdatePatientRequest(
     long? SalutationId, string FirstName, string? MiddleName, string LastName, Gender Gender,

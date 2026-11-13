@@ -147,3 +147,13 @@ breaks nearly every Radiology write action end-to-end until `dotnet ef database 
   modality — same simplification Lab made for its department worklist (department filter
   exists there; radiology has no equivalent split beyond the modality picker on the
   scheduling/capture worklists).
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **Billing gate** at scheduling for OP orders (same rule as Lab).
+- **Scheduling:** not in the past; a modality slot conflict (±15 min) is refused; a Scheduled scan can be rescheduled. Same-scan duplicates are refused.
+- Approved reports now appear in the EMR (timeline type `RadiologyReport`, investigations list).
+- Timestamps sent with a local offset (+05:30) are normalised to UTC globally (previously HTTP 500).

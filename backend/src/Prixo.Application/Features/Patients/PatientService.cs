@@ -32,7 +32,18 @@ public class PatientService(
     {
         var patients = db.Patients.AsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(query.Search))
+        var words = string.IsNullOrWhiteSpace(query.Search) ? [] : query.Search.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length > 1)
+        {
+            // "First Last" (or "Last First", or with a middle name): every word must match some name part.
+            foreach (var word in words)
+            {
+                var w = $"%{word}%";
+                patients = patients.Where(p => EF.Functions.ILike(p.FirstName, w) || EF.Functions.ILike(p.LastName, w) ||
+                    (p.MiddleName != null && EF.Functions.ILike(p.MiddleName, w)) || EF.Functions.ILike(p.Uhid, w));
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = query.Search.Trim();
             var likeTerm = $"%{term}%";
@@ -102,6 +113,23 @@ public class PatientService(
         var branchId = currentUser.BranchId
             ?? throw new DomainException("Select a branch before registering a patient.");
         await EnsureDemographicReferencesAsync(request, ct);
+
+        if (!request.ConfirmDuplicate)
+        {
+            // Server-side safety net for the wizard's duplicate check: an exact match on name, date of
+            // birth and mobile is refused unless the user has seen the warning and confirmed.
+            var first = request.FirstName.Trim().ToLower();
+            var last = request.LastName.Trim().ToLower();
+            var mobile = request.Mobile.Trim();
+            var duplicate = await db.Patients.AsNoTracking()
+                .Where(p => p.Mobile == mobile && p.DateOfBirth == request.DateOfBirth &&
+                    p.FirstName.ToLower() == first && p.LastName.ToLower() == last)
+                .Select(p => p.Uhid).FirstOrDefaultAsync(ct);
+            if (duplicate is not null)
+            {
+                throw new DomainException($"A patient with the same name, date of birth and mobile already exists ({duplicate}). Use the existing record, or confirm to register a separate person.");
+            }
+        }
 
         var uhid = await GenerateUhidAsync(ct);
         var patient = new Patient

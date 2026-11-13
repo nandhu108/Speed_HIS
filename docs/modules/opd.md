@@ -114,8 +114,9 @@ permission rather than one per workspace tab, same granularity choice as
 - `DrugPicker`/`IcdPicker` (`src/features/opd/components`) — debounced catalog search,
   reused across the workspace and the templates page.
 - `OpRegistrationUtilityPage` (`/opd/registration-utility`) — one search screen shared by
-  three legacy menu entries ("OP Registration Cancel" / "OP Case Sheet Reprint-Direct" /
-  "OP Casesheet Reprint-Preview"): find a visit, then cancel it or reprint its case sheet
+  reached from the "OP Registration Cancel" menu entry (the two legacy "OP Case Sheet
+  Reprint-Direct/Preview" entries pointed at the same page and were removed 2026-11-13 at the
+  hospital's request — the seeder soft-deletes them): find a visit, then cancel it or reprint its case sheet
   (the consultation summary — same PDF as the workspace's "Print summary" button, not the
   front-desk token slip).
 
@@ -392,3 +393,13 @@ MLC checkbox, and an Advance Amount + Payment Mode + Reference input row.
 - `opd.op_visits` gained a nullable **`department_id`**. `RegisterOpVisitRequest.DepartmentId` is **mandatory** (validator + service): the department must exist, be active and be Clinical (`DepartmentService.EnsureClinicalAsync`). Nullable in the DB only for MHC rows and pre-existing visits; the migration backfills existing visits from the doctor's first mapped department.
 - The Camp CSV bulk import calls `RegisterAsync` directly, so it falls back to the doctor's first mapped department (and fails the row if there is none).
 - All three registration forms (OPD Front Desk, Front Office quick panel, Camp Registration) show a required Department select; the Doctor list narrows to that department's doctors plus any doctor with no department mapping.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **Consultation lock:** writes to a Completed/Cancelled consultation are refused — corrections go into an EMR clinical note (addendum).
+- **Ownership:** a doctor can only write into their own patient's consultation (others via referral).
+- **Clinical workspace, orders and referrals** require `OPD.VISIT.MANAGE` (Reception no longer sees diagnoses/prescriptions); the printable visit summary stays at `OPD.VISIT.VIEW`.
+- Blocked patients cannot be registered; follow-up date cannot be in the past; systolic must exceed diastolic.

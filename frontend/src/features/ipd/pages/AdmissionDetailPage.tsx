@@ -123,6 +123,22 @@ export function AdmissionDetailPage() {
         actions={
           <div className="flex items-center gap-2">
             <StatusBadge tone={statusTone[admission.status]}>{ADMISSION_STATUS_LABELS[admission.status]}</StatusBadge>
+            {admission.status === 1 && hasPermission('LAB.ORDER.CREATE') && (
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/lab/orders', { state: { erOrder: { admissionId: admission.id, patientId: admission.patientId, patientName: admission.patientName, patientUhid: admission.patientUhid } } })}
+              >
+                Order lab test
+              </Button>
+            )}
+            {admission.status === 1 && hasPermission('RAD.ORDER.CREATE') && (
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/rad/orders', { state: { erOrder: { admissionId: admission.id, patientId: admission.patientId, patientName: admission.patientName, patientUhid: admission.patientUhid } } })}
+              >
+                Order radiology
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => openAdmissionSlip(admission.id)}>Admission slip</Button>
             <Button variant="ghost" onClick={() => navigate('/ipd/admissions')}>Back</Button>
           </div>

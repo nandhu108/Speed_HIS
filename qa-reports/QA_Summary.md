@@ -1,8 +1,28 @@
 # Prixo HIS — Functional QA Summary
 
+> ## Update 2026-11-13 — defects fixed and re-tested
+>
+> | | Baseline (2026-11-12) | Re-test after fixes (2026-11-13) |
+> |---|---|---|
+> | Test cases | 541 | 543 |
+> | Passed | 450 | **529** |
+> | Failed | 79 | **3** (all waiting on hospital price data) |
+> | Blocked | 1 | 0 |
+> | Server errors (HTTP 500) | 3 kinds | **0** |
+>
+> **43 of 45 defects are fixed and verified.** All 13 Critical defects are fixed in code. 11 of them pass outright. The other 2 (BUG-013 lab/radiology billing, BUG-021 bed charges) are code-complete but stay open until the hospital enters its **price list and General/Semi-Private bed rates**. See `GO_LIVE_CHECKLIST.md` §A.
+>
+> Additional regressions found and fixed during the re-test:
+> - A scheduled scan could never be cancelled (e.g. a no-show).
+> - Any timestamp sent with a local +05:30 offset crashed with HTTP 500.
+>
+> **Verdict:** ready for go-live from the software side once the hospital data in `GO_LIVE_CHECKLIST.md` is entered, the production setup there is done, and each department has walked its screens once. The automated QA ran at API level and did not exercise the UI.
+>
+> Per-defect re-test status: workbook sheet "6 Defect Register", column *Re-test 2026-11-13*. The sections below are the original baseline findings.
+
 **Date:** 2026-11-12 · **Build:** local dev (fresh database `prixo-fresh`), branch **SPEED_MULTI** · **Full detail:** `Prixo_HIS_QA_Report.xlsx`
 
-## Verdict
+## Verdict (baseline, before fixes)
 
 **Not ready for go-live.** The core clinical workflows exist and mostly behave correctly: registration, consultation, the lab and radiology pipelines, admission, OT and discharge. But 13 Critical defects remain in money handling, medication safety, discharge controls and the OT safety checklist. These must be fixed before real patients are handled.
 

@@ -60,6 +60,9 @@ public class RegisterPatientRequestValidator : AbstractValidator<RegisterPatient
         RuleFor(x => x.NationalId).MaximumLength(50);
         RuleFor(x => x.Remarks).MaximumLength(1000);
         RuleFor(x => x.EstimatedAge).InclusiveBetween(0, 130).When(x => x.EstimatedAge is not null);
+        RuleFor(x => x.Gender).IsInEnum().WithMessage("Select a valid gender.");
+        RuleFor(x => x.DateOfBirth).LessThanOrEqualTo(_ => DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5.5)))
+            .When(x => x.DateOfBirth is not null).WithMessage("Date of birth cannot be in the future.");
         RuleFor(x => x)
             .Must(x => x.DateOfBirth is not null || x.EstimatedAge is not null)
             .WithMessage("Provide either a date of birth or an estimated age.");
@@ -98,6 +101,9 @@ public class UpdatePatientRequestValidator : AbstractValidator<UpdatePatientRequ
         RuleFor(x => x.NationalId).MaximumLength(50);
         RuleFor(x => x.Remarks).MaximumLength(1000);
         RuleFor(x => x.EstimatedAge).InclusiveBetween(0, 130).When(x => x.EstimatedAge is not null);
+        RuleFor(x => x.Gender).IsInEnum().WithMessage("Select a valid gender.");
+        RuleFor(x => x.DateOfBirth).LessThanOrEqualTo(_ => DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5.5)))
+            .When(x => x.DateOfBirth is not null).WithMessage("Date of birth cannot be in the future.");
         RuleFor(x => x)
             .Must(x => x.DateOfBirth is not null || x.EstimatedAge is not null)
             .WithMessage("Provide either a date of birth or an estimated age.");

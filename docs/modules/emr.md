@@ -111,3 +111,10 @@ investigations, procedures, discharge summaries, results trend), `EMR.HISTORY.{V
   nothing copies a `VisitDiagnosis` into it automatically.
 - **Attachment upload has no virus scan.** `VirusScanStatus` stays `NotScanned` for every
   upload — see `IVirusScanner`, an unimplemented placeholder interface only.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- Radiology reports are aggregated: timeline event `RadiologyReport` (9) and "Radiology — …" rows in investigations.

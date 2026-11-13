@@ -21,8 +21,10 @@ const statusTone: Record<LabOrderStatus, 'success' | 'warning' | 'danger' | 'inf
   4: 'neutral',
 }
 
+/** Set by an ER visit ("Order STAT …") or an IP admission ("Order lab test / radiology"). */
 interface ErOrderPrefill {
-  emergencyVisitId: number
+  emergencyVisitId?: number
+  admissionId?: number
   patientId: number
   patientName: string
   patientUhid: string
@@ -108,7 +110,7 @@ function CreateOrderModal({
 
   const [patient, setPatient] = useState<PatientListItem | null>(null)
   const [doctorId, setDoctorId] = useState('')
-  const [priority, setPriority] = useState<'1' | '2' | '3'>(erPrefill ? '3' : '1')
+  const [priority, setPriority] = useState<'1' | '2' | '3'>(erPrefill?.emergencyVisitId ? '3' : '1')
   const [notes, setNotes] = useState('')
   const [selectedTests, setSelectedTests] = useState<Set<number>>(new Set())
   const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set())
@@ -136,6 +138,7 @@ function CreateOrderModal({
         patientId,
         opVisitId: opPrefill?.opVisitId ?? null,
         emergencyVisitId: erPrefill?.emergencyVisitId ?? null,
+        admissionId: erPrefill?.admissionId ?? null,
         clinicalOrderId: opPrefill?.clinicalOrderId ?? null,
         orderedByDoctorId: doctorId ? Number(doctorId) : null,
         priority: Number(priority) as 1 | 2 | 3,
@@ -174,7 +177,7 @@ function CreateOrderModal({
         {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         {erPrefill ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            ER STAT order for <span className="font-medium">{erPrefill.patientName}</span>{' '}
+            {erPrefill.admissionId ? 'Inpatient order for' : 'ER STAT order for'} <span className="font-medium">{erPrefill.patientName}</span>{' '}
             <span className="font-mono text-xs">({erPrefill.patientUhid})</span>
           </div>
         ) : opPrefill ? (

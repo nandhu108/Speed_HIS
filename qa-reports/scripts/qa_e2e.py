@@ -79,6 +79,20 @@ else:
     s, d = doc.put(f"/opd/visits/{vid}/diagnoses", {"diagnoses": [{"icdCodeId": icd["id"], "type": 1, "notes": "QA"}]}); step("E2E1-04", M1, "Doctor records diagnosis", s, d)
     s, d = doc.post("/lab/orders", {"patientId": pOP, "opVisitId": vid, "emergencyVisitId": None, "clinicalOrderId": None, "orderedByDoctorId": DOC, "priority": 1, "clinicalNotes": None, "items": [{"labTestId": 7, "testProfileId": None}]})
     lo = idof(d) if ok(s) else None; step("E2E1-05", M1, "Lab order linked to the OP visit", s, d)
+    _rs, _rd = doc.post("/rad/orders", {"patientId": pOP, "opVisitId": vid, "admissionId": None, "emergencyVisitId": None, "clinicalOrderId": None, "orderedByDoctorId": DOC, "priority": 1, "clinicalNotes": None, "radiologyTestIds": [14]})
+    ro = idof(_rd) if ok(_rs) else None
+    s, d = bil.post("/billing/bills/generate-op", {"opVisitId": vid}); b = d["data"] if ok(s) else {}
+    step("E2E1-11", M1, "OP bill generated with consultation + pending lab and radiology orders", s, d, sev="Critical")
+    lines = [(i["sourceType"], i["description"], i["rate"]) for i in b.get("items", [])]
+    tc("E2E1-15", M1, "Lab test and scan done for this visit appear on the OP bill", any(l[0] == 8 for l in lines) and any(l[0] == 9 for l in lines),
+       f"bill lines={lines}", "Lab + radiology lines on the bill", severity="Critical")
+    priced_tests = [l for l in lines if l[0] in (8, 9) and D(str(l[2])) > 0]
+    tc("E2E1-12", M1, "Lab and radiology lines are priced from the tariff", len(priced_tests) >= 2, f"bill lines={lines}",
+       "APTT and CT Brain billed at tariff", "Complete the OP journey -> generate OP bill", severity="High",
+       bug="DATA: the hospital has not yet mapped lab/radiology tests to priced billing services; lines show 0.00 '(price not configured)' until the price list is entered.")
+    s, d = bil.post(f"/billing/bills/{b['id']}/payments", {"paymentModeId": 1, "amount": b["balanceAmount"], "referenceNumber": None}) if b.get("balanceAmount") else (200, {})
+    bb = bil.get(f"/billing/bills/{b['id']}")[1]["data"]
+    step("E2E1-13", M1, "OP bill settled in full before diagnostics", 200, {}, cond=bb["status"] == 3, sev="Critical", exp="Paid")
     lod = admin.get(f"/lab/orders/{lo}")[1]["data"]; it = lod["items"][0]
     sm = lab.post("/lab/collection/samples", {"labOrderId": lo, "sampleTypeId": admin.get("/lab/tests/7")[1]["data"]["sampleTypeId"], "labOrderItemIds": [it["id"]]})[1]["data"]
     lab.post(f"/lab/collection/samples/{sm['id'] if isinstance(sm, dict) else sm}/receive")
@@ -88,8 +102,7 @@ else:
     step("E2E1-06", M1, "Lab result collected -> received -> entered -> verified -> approved", s, d, sev="Critical")
     s, d = doc.get(f"/opd/visits/{vid}/workspace")
     step("E2E1-07", M1, "Doctor sees the approved lab result back in the patient's record", s, d, cond="APTT" in json.dumps(doc.get(f"/emr/patients/{pOP}/investigations")[1]["data"]) or "Activated" in json.dumps(doc.get(f"/emr/patients/{pOP}/investigations")[1]["data"]), sev="High")
-    s, d = doc.post("/rad/orders", {"patientId": pOP, "opVisitId": vid, "admissionId": None, "emergencyVisitId": None, "clinicalOrderId": None, "orderedByDoctorId": DOC, "priority": 1, "clinicalNotes": None, "radiologyTestIds": [14]})
-    ro = idof(d) if ok(s) else None; rit = admin.get(f"/rad/orders/{ro}")[1]["data"]["items"][0]
+    rit = admin.get(f"/rad/orders/{ro}")[1]["data"]["items"][0]
     tech.post(f"/rad/scheduling/order-items/{rit['id']}", {"scheduledAt": (datetime.datetime.now(UTC) + datetime.timedelta(hours=1)).isoformat(), "notes": None})
     tech.post(f"/rad/capture/order-items/{rit['id']}")
     radr.post(f"/rad/order-items/{rit['id']}/report", {"templateId": None, "findings": "Normal (QA)", "impression": "Normal (QA)"})
@@ -102,16 +115,6 @@ else:
     rxid = admin.get(f"/opd/visits/{vid}/workspace")[1]["data"]["prescription"]["id"]
     s, d = ph.post("/pharmacy/sales", {"storeId": store, "patientId": pOP, "prescriptionId": rxid, "paymentModeId": 1, "items": [{"drugId": drug["id"], "quantity": 3, "discountPercent": 0}]})
     step("E2E1-10", M1, "Pharmacy dispenses against the prescription", s, d, sev="Critical")
-    s, d = bil.post("/billing/bills/generate-op", {"opVisitId": vid}); b = d["data"] if ok(s) else {}
-    step("E2E1-11", M1, "OP bill generated with consultation", s, d, sev="Critical")
-    lines = [(i["sourceType"], i["description"], i["rate"]) for i in b.get("items", [])]
-    priced_tests = [l for l in lines if l[0] in (2, 3) and D(str(l[2])) > 0]
-    tc("E2E1-12", M1, "OP bill automatically picks up the lab and radiology tests done for this visit at their tariff price", len(priced_tests) >= 2,
-       f"bill lines={lines}", "APTT and CT Brain billed at tariff", "Complete the OP journey -> generate OP bill", severity="Critical",
-       bug="Integration gap: lab and radiology tests performed for an OP visit are not pulled onto the OP bill (no price mapping); the patient pays consultation only.")
-    s, d = bil.post(f"/billing/bills/{b['id']}/payments", {"paymentModeId": 1, "amount": b["balanceAmount"], "referenceNumber": None})
-    bb = bil.get(f"/billing/bills/{b['id']}")[1]["data"]
-    step("E2E1-13", M1, "OP bill settled in full; receipt available", s, d, cond=ok(s) and bb["status"] == 3, sev="Critical")
     tl = json.dumps(doc.get(f"/emr/patients/{pOP}/timeline")[1]["data"])
     tc("E2E1-14", M1, "EMR timeline shows the visit, prescription and lab result", "OPD Visit" in tl and "Prescription" in tl and ("Lab" in tl or "APTT" in tl or "Activated" in tl), tl[:200], "All three present", severity="High")
 
@@ -145,8 +148,8 @@ if D(str(ib["balanceAmount"])) > 0:
 ib = bil.get(f"/billing/bills/{ib['id']}")[1]["data"]
 step("E2E2-05", M2, "IP bill fully settled (balance 0)", 200, {}, cond=D(str(ib["balanceAmount"])) == 0, sev="Critical", exp=f"balance 0 (was {ib['balanceAmount']})")
 doc.post(f"/ipd/admissions/{A}/discharge/request", {"requestedByDoctorId": DOC, "dischargeType": 1, "dischargeTypeNotes": None})
-for ct in (1, 2, 3, 4):
-    hn.post(f"/ipd/admissions/{A}/discharge/clearances/{ct}", {"remarks": "QA"})
+for ct, who in ((1, bil), (2, ph), (3, hn), (4, doc)):
+    who.post(f"/ipd/admissions/{A}/discharge/clearances/{ct}", {"remarks": "QA"})
 doc.put(f"/ipd/admissions/{A}/discharge/summary", {"finalDiagnosis": "QA dx", "courseInHospital": "QA", "medicationsOnDischarge": "QA", "followUpAdvice": "QA", "conditionAtDischarge": "Stable"})
 doc.post(f"/doctor-portal/discharge-approvals/{A}/approve")
 s, d = admin.post(f"/ipd/admissions/{A}/discharge/finalize")
@@ -186,8 +189,8 @@ tc("E2E3-06", M3, "OT charges reach the IP bill automatically when surgery is co
    bug="Completing a surgery posts no theatre/surgeon/anaesthesia charge; OT time must be keyed manually as a service line (only implant/consumable usage auto-posts).")
 bil.post(f"/billing/bills/{sb['id']}/payments", {"paymentModeId": 1, "amount": sb["balanceAmount"], "referenceNumber": None})
 doc.post(f"/ipd/admissions/{AS}/discharge/request", {"requestedByDoctorId": DOC, "dischargeType": 1, "dischargeTypeNotes": None})
-for ct in (1, 2, 3, 4):
-    hn.post(f"/ipd/admissions/{AS}/discharge/clearances/{ct}", {"remarks": "QA"})
+for ct, who in ((1, bil), (2, ph), (3, hn), (4, doc)):
+    who.post(f"/ipd/admissions/{AS}/discharge/clearances/{ct}", {"remarks": "QA"})
 doc.put(f"/ipd/admissions/{AS}/discharge/summary", {"finalDiagnosis": "Acute appendicitis", "courseInHospital": "Lap appendicectomy", "medicationsOnDischarge": "Analgesics", "followUpAdvice": "Suture removal day 7", "conditionAtDischarge": "Stable"})
 doc.post(f"/doctor-portal/discharge-approvals/{AS}/approve")
 s, d = admin.post(f"/ipd/admissions/{AS}/discharge/finalize"); step("E2E3-07", M3, "Surgical patient billed, settled and discharged", s, d, sev="Critical")

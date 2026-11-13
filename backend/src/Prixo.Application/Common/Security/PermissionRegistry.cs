@@ -412,10 +412,10 @@ public static class PermissionRegistry
     public const string DischargeClear = "IPD.DISCHARGE.CLEAR";
     /// <summary>May act on the discharge clearance checklist at all (endpoint gate); the per-department codes below decide which item.</summary>
     public const string DischargeClearItem = "IPD.DISCHARGE.CLEARITEM";
-    public const string DischargeClearBilling = "IPD.DISCHARGE.CLEAR.BILLING";
-    public const string DischargeClearPharmacy = "IPD.DISCHARGE.CLEAR.PHARMACY";
-    public const string DischargeClearNursing = "IPD.DISCHARGE.CLEAR.NURSING";
-    public const string DischargeClearInvestigation = "IPD.DISCHARGE.CLEAR.INVESTIGATION";
+    public const string DischargeClearBilling = "IPD.DISCHARGECLEAR.BILLING";
+    public const string DischargeClearPharmacy = "IPD.DISCHARGECLEAR.PHARMACY";
+    public const string DischargeClearNursing = "IPD.DISCHARGECLEAR.NURSING";
+    public const string DischargeClearInvestigation = "IPD.DISCHARGECLEAR.INVESTIGATION";
     public const string DischargeApproveSummary = "IPD.DISCHARGE.APPROVESUMMARY";
     public const string DischargeFinalize = "IPD.DISCHARGE.FINALIZE";
 

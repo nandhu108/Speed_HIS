@@ -179,6 +179,10 @@ public class AppointmentService(
         {
             throw new DomainException($"An appointment that is {appointment.Status} cannot be checked in.");
         }
+        if (appointment.AppointmentDate != HospitalToday())
+        {
+            throw new DomainException($"This appointment is for {appointment.AppointmentDate:dd-MMM-yyyy}; patients can only be checked in on the day.");
+        }
 
         appointment.Status = AppointmentStatus.CheckedIn;
         appointment.CheckedInAt = timeProvider.GetUtcNow();
@@ -388,8 +392,26 @@ public class AppointmentService(
     {
         var patient = await db.Patients.FirstOrDefaultAsync(p => p.Id == request.PatientId, ct)
             ?? throw new NotFoundException(nameof(Patient), request.PatientId);
+        if (patient.IsBlocked)
+        {
+            throw new DomainException($"This patient is blocked ({patient.BlockedReason}). Unblock the patient before booking.");
+        }
         var doctor = await db.Doctors.Include(d => d.User).FirstOrDefaultAsync(d => d.Id == request.DoctorId, ct)
             ?? throw new NotFoundException(nameof(Doctor), request.DoctorId);
+        if (request.AppointmentDate < HospitalToday())
+        {
+            throw new DomainException("An appointment cannot be booked for a past date.");
+        }
+        if (request.BookingType == AppointmentBookingType.Booked)
+        {
+            // A booked appointment must fall inside the doctor's schedule for that day (walk-in and
+            // ER token mapping may be issued outside it).
+            var windows = await BuildAvailabilityWindowsAsync(doctor, request.AppointmentDate, ct);
+            if (!windows.Any(w => request.StartTime >= w.Start && request.StartTime < w.End))
+            {
+                throw new DomainException($"{request.StartTime:HH:mm} is outside Dr. {doctor.User?.FullName}'s schedule on {request.AppointmentDate:dd-MMM-yyyy}.");
+            }
+        }
         AppointmentType? appointmentType = null;
         if (request.AppointmentTypeId is { } appointmentTypeId)
         {
@@ -450,6 +472,9 @@ public class AppointmentService(
 
         return appointment;
     }
+
+    /// <summary>The hospital's calendar day (India Standard Time, UTC+5:30), so "today" flips at local midnight.</summary>
+    private DateOnly HospitalToday() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime.AddHours(5.5));
 
     private async Task<int> ResolveSlotMinutesAsync(Doctor doctor, DateOnly date, TimeOnly startTime, CancellationToken ct)
     {

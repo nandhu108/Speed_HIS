@@ -142,6 +142,10 @@ export const useGenerateEmergencyBill = () =>
     return data.data!
   }, billKeys)
 
+/** "Pending order retrieval": pulls not-yet-billed lab / radiology orders of the episode onto the bill. */
+export const useAddPendingOrders = (billId: number) =>
+  useInvalidating(() => api.post(`${b.bills}/${billId}/pending-orders`), billDetailKeys(billId))
+
 export const useAddBillItem = (billId: number) =>
   useInvalidating((payload: AddManualBillItemPayload) => api.post(`${b.bills}/${billId}/items`, payload), billDetailKeys(billId))
 

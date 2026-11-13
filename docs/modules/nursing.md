@@ -130,3 +130,10 @@ top-level records that need to be listed/filtered without a join.
   the dev DB (`nursing.mar_administrations` now has `batch_id`/`quantity` plus the FK/index, and
   `__EFMigrationsHistory` records it) so the MAR sub-tab and administer/skip/refuse actions work
   again; no source change was needed.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- Risk-scale items are range-checked (Pain 0–10; Morse items 0–30, total ≤ 125; Braden items 1–4).

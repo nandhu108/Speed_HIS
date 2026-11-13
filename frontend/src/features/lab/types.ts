@@ -196,6 +196,8 @@ export interface CreateLabOrderPayload {
   patientId: number
   opVisitId: number | null
   emergencyVisitId: number | null
+  /** Inpatient investigation — charged to the admission's IP bill. */
+  admissionId?: number | null
   clinicalOrderId: number | null
   orderedByDoctorId: number | null
   priority: ClinicalOrderPriority

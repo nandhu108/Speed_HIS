@@ -118,6 +118,7 @@ tc("OT-037", M, "Implants/consumables can be recorded during surgery without dep
    "Start surgery for an admission with no IP bill yet -> record consumable", severity="Medium",
    bug="Consumable/implant usage is refused mid-surgery until Billing has generated the IP bill ('Generate the IP bill for this admission before recording usage').")
 bil.post(f"/billing/bills/generate-ip/{A}")
+q0 = next(b for b in admin.get(f"/pharmacy/stock/batches?storeId={store}&onlyInStock=false")[1]["data"] if b["id"] == batch["id"])["quantityOnHand"]
 s, d = ot.post(f"/ot/bookings/{B1}/usage/consumables", {"batchId": batch["id"], "quantity": 2})
 q1 = next(b for b in admin.get(f"/pharmacy/stock/batches?storeId={store}&onlyInStock=false")[1]["data"] if b["id"] == batch["id"])["quantityOnHand"]
 tc("OT-025", M, "Consumable usage decrements stock", ok(s) and q0 - q1 == 2, f"{s} {msg(d)} stock {q0}->{q1}", "-2", severity="Critical")

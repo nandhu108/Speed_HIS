@@ -43,6 +43,13 @@ public class TimelineService(IAppDbContext db)
         events.AddRange(labResults.Where(r => r.ApprovedAt is not null).Select(r => new TimelineEventDto(
             r.ApprovedAt!.Value, TimelineEventType.LabResult, $"Lab Result — {r.Name}", "Approved", r.Id)));
 
+        var radReports = await db.RadOrderItems.AsNoTracking()
+            .Where(i => i.RadOrder!.PatientId == patientId && i.Status == RadOrderItemStatus.Approved && i.Report != null)
+            .Select(i => new { i.Id, i.RadiologyTest!.Name, i.Report!.Impression, i.Report.ApprovedAt })
+            .ToListAsync(ct);
+        events.AddRange(radReports.Where(r => r.ApprovedAt is not null).Select(r => new TimelineEventDto(
+            r.ApprovedAt!.Value, TimelineEventType.RadiologyReport, $"Radiology Report — {r.Name}", r.Impression, r.Id)));
+
         var prescriptions = await db.Prescriptions.AsNoTracking().Where(p => p.Visit!.PatientId == patientId)
             .Include(p => p.Visit).ThenInclude(v => v!.Doctor).ThenInclude(d => d!.User)
             .Include(p => p.Items).ThenInclude(i => i.Drug)
@@ -101,11 +108,21 @@ public class TimelineService(IAppDbContext db)
             .OrderByDescending(i => i.LabOrder!.OrderDate)
             .ToListAsync(ct);
 
-        return [.. items.Select(i => new InvestigationHistoryDto(
+        var labRows = items.Select(i => new InvestigationHistoryDto(
             i.Id, i.LabOrderId, i.LabOrder!.OrderDate, i.LabTest!.Name, i.Status.ToString(),
             i.Status == LabOrderItemStatus.Approved && i.Result is not null
                 ? string.Join(", ", i.Result.Values.Select(v => $"{v.Value}{(string.IsNullOrEmpty(v.Unit) ? "" : $" {v.Unit}")}"))
-                : null))];
+                : null));
+
+        // Imaging belongs in the same investigations view: approved reports show their impression.
+        var scans = await db.RadOrderItems.AsNoTracking().Where(i => i.RadOrder!.PatientId == patientId)
+            .Select(i => new { i.Id, i.RadOrderId, i.RadOrder!.OrderDate, i.RadiologyTest!.Name, i.Status, Impression = i.Report != null ? i.Report.Impression : null })
+            .ToListAsync(ct);
+        var radRows = scans.Select(s => new InvestigationHistoryDto(
+            s.Id, s.RadOrderId, s.OrderDate, $"Radiology — {s.Name}", s.Status.ToString(),
+            s.Status == RadOrderItemStatus.Approved ? s.Impression : null));
+
+        return [.. labRows.Concat(radRows).OrderByDescending(r => r.OrderDate)];
     }
 
     public async Task<IReadOnlyList<ProcedureHistoryDto>> GetProcedureHistoryAsync(long patientId, CancellationToken ct = default)

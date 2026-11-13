@@ -6,6 +6,7 @@ M = "D-Laboratory"
 st = load_state(); P = st["patients"]; DOC = st["doctors"]["qa.doctor"]; GM = st["depts"]["DEP001"]
 admin = Sess("admin", "Admin@123", 2); rec = Sess("qa.reception", "Qa@12345", 2); doc = Sess("qa.doctor", "Qa@12345", 2)
 lab = Sess("qa.lab", "Qa@12345", 2); patho = Sess("qa.patho", "Qa@12345", 2); nur = Sess("qa.nurse", "Qa@12345", 2); bil = Sess("qa.billing", "Qa@12345", 2)
+idof = lambda d: d["data"] if not isinstance(d["data"], dict) else d["data"]["id"]
 APTT = 7   # normal 25-35s, critical high 90 (adult, any sex)
 
 
@@ -108,10 +109,20 @@ unb = admin.get(f"/lab/orders/unbilled-report?fromDate={TD}&toDate={TD}")[1]["da
 tc("LAB-062", M, "Unbilled report with no date range returns the current unbilled items (default window)", len(unb0) > 0, f"no-date call returned {len(unb0)} rows while date-ranged call returned {len(unb)}", "Same unbilled items returned by default", severity="Low")
 tc("LAB-009", M, "Item with a result entered but NO bill link is reported as unbilled", any(oid == x.get("labOrderId", x.get("orderId")) or o["orderNumber"] == x.get("orderNumber") for x in unb) if isinstance(unb, list) else False,
    f"{len(unb) if isinstance(unb, list) else unb} unbilled rows", "Listed in Unbilled Orders report", severity="High")
-tc("LAB-061", M, "Laboratory processing is gated by billing (test cannot be processed until billed)", False,
-   "Sample collected, received, result entered and approved with NO bill line for the test; nothing blocked it (documented as deliberate/advisory only)",
-   "Test must be billed/paid before sample collection or result release", "Place lab order -> never bill -> collect -> receive -> result", severity="High",
-   bug="Revenue leakage: lab tests are processed without billing. Lab tests have no billing-service mapping (0 of 69) and OP-bill lines for doctor orders are zero-rate stubs.")
+_gv = rec.post("/opd/visits", {"patientId": P["Foxtrot"], "doctorId": DOC, "departmentId": GM, "appointmentId": None})[1]["data"]["id"]
+_gs, _gd = order("Foxtrot", [APTT], visit=_gv); _go = idof(_gd) if ok(_gs) else None
+_gi = detail(_go)["items"][0] if _go else None
+_cs, _cd = sample_for(_go, [_gi["id"]], SAMPLE) if _gi else (0, {})
+tc("LAB-061", M, "OP lab sample cannot be collected until the test is billed and paid (billing verification)", rej(_cs),
+   f"{_cs} {msg(_cd)}", "Rejected: not billed", "OP visit -> lab order -> collect before billing", severity="High")
+_bs, _bd = bil.post("/billing/bills/generate-op", {"opVisitId": _gv})
+_lines = [x for x in (_bd.get("data") or {}).get("items", []) if x["sourceType"] == 8]
+tc("LAB-063", M, "Generating the OP bill pulls the ordered lab test onto the bill (pending order retrieval)", ok(_bs) and len(_lines) == 1,
+   f"{_bs} lab lines={[(x['description'], x['rate']) for x in _lines]}", "1 lab line", severity="High")
+if ok(_bs):
+    bil.post(f"/billing/bills/{_bd['data']['id']}/payments", {"paymentModeId": 1, "amount": _bd["data"]["balanceAmount"], "referenceNumber": None}) if _bd["data"]["balanceAmount"] > 0 else None
+    _cs, _cd = sample_for(_go, [_gi["id"]], SAMPLE)
+    tc("LAB-064", M, "After billing and payment the sample can be collected", ok(_cs), f"{_cs} {msg(_cd)}", "Collected", severity="High")
 r = lab.get(f"/lab/order-items/{item['id']}/result")[1]["data"]
 flag = json.dumps(r)
 print("RESULT RAW:", flag[:500])

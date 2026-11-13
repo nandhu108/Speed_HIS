@@ -817,3 +817,18 @@ is the gate"). Now gated by `canApprove` the same way `RefundApprovalsPage` alre
 - Bill generation itself is a single insert, not wrapped in an explicit transaction (payment
   collection and refund approval are, per CLAUDE.md's transactional-boundary list — bill
   generation only ever writes one aggregate root in one `SaveChangesAsync`).
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **Concurrency:** payments, advance draws, refunds and bill cancellation take a row lock on the bill (`IUnitOfWork.LockAsync<Bill>` — `SELECT … FOR UPDATE`). Simultaneous payments on one bill no longer each succeed.
+- **Refund ceiling:** a refund request counts Pending + Approved refunds against what is still paid (bill-level) and all non-rejected refunds against the selected payment; issuing re-checks against the locked bill. Paid amount can no longer go negative.
+- **Transaction references:** a reference (UPI/card/NEFT…) can be used once per payment mode.
+- **Discount reason** is mandatory (item and bill level). **Corporate credit limit** is enforced when marking a credit bill.
+- **Cancelled visits** cannot be billed.
+- **Day close / cashier shift:** expected collection = bill payments + deposits received − cash refunds issued (`CollectionMath`), so the drawer reconciles.
+- **Pending order retrieval:** generating an OP/IP/ER bill pulls every unbilled lab test / scan of the episode onto the bill at the tariff price of the test's billing service (`BillItemSourceType.LabTest` / `RadiologyTest`) and back-links the order item; `POST /billing/bills/{id}/pending-orders` adds orders raised later (works on a settled bill — it becomes partially paid). A test with no billing service mapped is added at 0.00 labelled "(price not configured)".
+- **IP bill is one running bill per admission** (`IpBillAccess`): pharmacy IP issues (`Pharmacy` lines at MRP, tax-inclusive), OT implant/consumable usage and OT time post onto it, creating it on first use; `generate-ip` is idempotent (refreshes and returns the existing bill).
+- New settings: `Billing.DiagnosticsGate` (`Paid` | `Billed` | `None`, default Paid) and `Ot.HourlyChargeServiceCode` (Speed Multi: `SM-OT-HOUR`).

@@ -282,3 +282,12 @@ Expanded in 2026-10 to provide complete end-to-end ABDM integration covering **M
 ### Frontend
 - **Admin Dashboard**: `/admin/abdm` (permission `ADMIN.ABDM.MANAGE` or `ADMIN.SETTING.VIEW`).
 - **Patient Detail Workspace**: Dedicated `ABDM (M1/M2/M3)` tab with sub-tabs for M1 (ABHA Profile & QR Scan), M2 (HIP Care Contexts), and M3 (Longitudinal Health Records).
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- **Duplicate on save:** an exact match on name + DOB + mobile is refused unless `confirmDuplicate` is sent (the wizard sends it after the user acknowledges the warning).
+- Gender must be valid; DOB cannot be in the future. Search accepts "First Last" (every word must match a name part).
+- **Block is now enforced** for OP registration, appointments and admission (supersedes the earlier "informational only" note).

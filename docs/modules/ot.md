@@ -123,3 +123,12 @@ verification), `OT.ANAESTHESIANOTE.MANAGE`, `OT.OPERATIVENOTE.MANAGE`, `OT.USAGE
 - **No OT-specific PDF** (booking slip, register export) — the register is a screen/API
   report only, unlike Radiology/Lab's PDF reports; a natural follow-up using the existing
   `IPdfService` pattern.
+
+
+## Go-live QA fixes (2026-11-13)
+
+From the functional QA pass (`qa-reports/`). Migration `20261113_GoLive_QaFixes`.
+
+- WHO checklist phases can only be completed when their mandatory items are ticked (Sign In: identity, site marked, anaesthesia check, oximeter; Time Out: team, patient/site/procedure, critical events; Sign Out: procedure recorded, counts correct, equipment, recovery). Un-ticking re-opens the phase.
+- Bookings cannot be made/rescheduled into the past; surgeon ≠ anaesthetist; admission must be active.
+- Implant usage needs a serial number; usage posts to the running IP bill (created on demand); completing a case posts OT time (`Ot.HourlyChargeServiceCode`, per started hour).

@@ -2,7 +2,7 @@ export type AllergenType = 1 | 2 | 3 | 4 // Drug, Food, Environmental, Other
 export type AllergySeverity = 1 | 2 | 3 // Mild, Moderate, Severe
 export type ProblemStatus = 1 | 2 // Active, Resolved
 export type VirusScanStatus = 1 | 2 | 3 // NotScanned, Clean, Infected
-export type TimelineEventType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 // Visit, Admission, LabResult, Prescription, Procedure, DischargeSummary, ClinicalNote, Attachment
+export type TimelineEventType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 // Visit, Admission, LabResult, Prescription, Procedure, DischargeSummary, ClinicalNote, Attachment, RadiologyReport
 
 export const ALLERGEN_TYPE_LABELS: Record<AllergenType, string> = { 1: 'Drug', 2: 'Food', 3: 'Environmental', 4: 'Other' }
 export const ALLERGY_SEVERITY_LABELS: Record<AllergySeverity, string> = { 1: 'Mild', 2: 'Moderate', 3: 'Severe' }
@@ -10,6 +10,7 @@ export const PROBLEM_STATUS_LABELS: Record<ProblemStatus, string> = { 1: 'Active
 export const VIRUS_SCAN_STATUS_LABELS: Record<VirusScanStatus, string> = { 1: 'Not scanned', 2: 'Clean', 3: 'Infected' }
 export const TIMELINE_EVENT_LABELS: Record<TimelineEventType, string> = {
   1: 'OPD Visit', 2: 'Admission', 3: 'Lab Result', 4: 'Prescription', 5: 'Procedure', 6: 'Discharge Summary', 7: 'Clinical Note', 8: 'Attachment',
+  9: 'Radiology Report',
 }
 
 // ── Histories ────────────────────────────────────────────────────────────

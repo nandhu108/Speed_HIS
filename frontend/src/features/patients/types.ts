@@ -165,6 +165,8 @@ export interface PatientDetail {
 }
 
 export interface RegisterPatientPayload {
+  /** Set when the user has seen the duplicate warning and chosen to register anyway. */
+  confirmDuplicate?: boolean
   salutationId: number | null
   firstName: string
   middleName: string | null

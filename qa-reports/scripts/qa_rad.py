@@ -56,10 +56,10 @@ s, d = tech.get("/rad/scheduling/worklist")
 tc("RAD-009", M, "Order appears in scheduling worklist", s == 200 and str(o["orderNumber"]) in json.dumps(d["data"]), f"{s} rows={len(d['data']) if s == 200 and isinstance(d['data'], list) else ''}", "Listed", severity="High")
 s, d = tech.post(f"/rad/capture/order-items/{it['id']}")
 tc("RAD-010", M, "Image capture BEFORE scheduling is blocked", rej(s), f"{s} {msg(d)}", "Rejected", severity="High")
-_s, _d = rorder("Golf", [plain["id"]]); _past_item = rdetail(idof(_d))["items"][0]
+_s, _d = rorder("Charlie", [plain["id"]]); _past_item = rdetail(idof(_d))["items"][0]
 s, d = tech.post(f"/rad/scheduling/order-items/{_past_item['id']}", {"scheduledAt": (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)).isoformat(), "notes": None})
 tc("RAD-011", M, "Scheduling a scan in the PAST rejected", rej(s), f"{s} {msg(d)}", "Rejected", severity="Medium")
-_s, _d = rorder("Golf", [plain["id"]]); _naive_item = rdetail(idof(_d))["items"][0]
+_s, _d = rorder("Delta", [plain["id"]]); _naive_item = rdetail(idof(_d))["items"][0]
 s, d = tech.post(f"/rad/scheduling/order-items/{_naive_item['id']}", {"scheduledAt": (datetime.datetime.now() + datetime.timedelta(days=3)).replace(microsecond=0).isoformat(), "notes": None})
 tc("RAD-056", M, "Scheduled time without a timezone offset is accepted or cleanly rejected (no server crash)", s < 500, f"{s} {msg(d)}", "2xx or 4xx, never 500", severity="Medium",
    bug="POST /rad/scheduling/order-items/{id} with a timezone-less ISO datetime returns HTTP 500 (unhandled) instead of a validation error.")
@@ -111,16 +111,25 @@ tc("RAD-032", M, "Order status rolls up to Completed", o["status"] == 3, f"statu
 s, d = doc.get(f"/emr/patients/{P['Golf']}/investigations")
 tc("RAD-033", M, "Approved report visible in the patient's EMR", s == 200 and (plain["name"] in json.dumps(d["data"]) or "Radiology" in json.dumps(d["data"]) or "Chest" in json.dumps(d["data"])), f"{s} {json.dumps(d['data'])[:150]}", "Radiology result listed", severity="High", bug="Radiology is not aggregated into the EMR at all: approved reports do not appear in the patient timeline, investigations or procedures views (EMR only aggregates lab results).")
 s, d = doc.get(f"/emr/patients/{P['Foxtrot']}/investigations")
-tc("RAD-034", M, "Report NOT visible in another patient's EMR", s == 200 and plain["name"] not in json.dumps(d["data"]), f"{s}", "Absent", severity="Critical")
+tc("RAD-034", M, "Report NOT visible in another patient's EMR", s == 200 and all(x.get("labOrderId") != oid for x in d["data"] if x["testName"].startswith("Radiology")), f"{s}", "Absent", severity="Critical")
 
 # ---- billing verification
 TD = TODAY.isoformat()
 unb = admin.get(f"/rad/orders/unbilled-report?fromDate={TD}&toDate={TD}")[1]["data"]
 tc("RAD-035", M, "Approved but unbilled scan appears in the Unbilled Orders report", any(o["orderNumber"] == x.get("orderNumber") for x in unb), f"{len(unb)} rows", "Listed", severity="High")
-tc("RAD-036", M, "Radiology is gated by billing (scan cannot be scheduled/captured/reported until billed)", False,
-   "Scan scheduled, captured, reported and approved with no bill line; nothing blocked it (documented as deliberate/advisory only)",
-   "Billing verified before scan", "Order -> never bill -> schedule -> capture -> report", severity="High",
-   bug="Revenue leakage: radiology scans are performed without billing verification; radiology tests have no billing service mapping.")
+_rv = Sess("qa.reception", "Qa@12345", 2).post("/opd/visits", {"patientId": P["Foxtrot"], "doctorId": DOC, "departmentId": st["depts"]["DEP001"], "appointmentId": None})[1]["data"]["id"]
+_rs, _rd = rorder("Foxtrot", [14], opVisitId=_rv); _ro = idof(_rd) if ok(_rs) else None
+_ri = rdetail(_ro)["items"][0] if _ro else None
+_ss, _sd = tech.post(f"/rad/scheduling/order-items/{_ri['id']}", {"scheduledAt": (FUT + datetime.timedelta(days=5)).isoformat(), "notes": None}) if _ri else (0, {})
+tc("RAD-036", M, "OP scan cannot be scheduled until it is billed and paid (billing verification)", rej(_ss), f"{_ss} {msg(_sd)}", "Rejected: not billed",
+   "OP visit -> radiology order -> schedule before billing", severity="High")
+_bs, _bd = bil.post("/billing/bills/generate-op", {"opVisitId": _rv})
+_lines = [x for x in (_bd.get("data") or {}).get("items", []) if x["sourceType"] == 9]
+tc("RAD-057", M, "Generating the OP bill pulls the ordered scan onto the bill", ok(_bs) and len(_lines) == 1, f"{_bs} rad lines={[(x['description'], x['rate']) for x in _lines]}", "1 radiology line", severity="High")
+if ok(_bs) and _bd["data"]["balanceAmount"] > 0:
+    bil.post(f"/billing/bills/{_bd['data']['id']}/payments", {"paymentModeId": 1, "amount": _bd["data"]["balanceAmount"], "referenceNumber": None})
+_ss, _sd = tech.post(f"/rad/scheduling/order-items/{_ri['id']}", {"scheduledAt": (FUT + datetime.timedelta(days=5)).isoformat(), "notes": None})
+tc("RAD-058", M, "After billing and payment the scan can be scheduled", ok(_ss), f"{_ss} {msg(_sd)}", "Scheduled", severity="High")
 mapped = sum(1 for t in tests if admin.get(f"/rad/tests/{t['id']}")[1]["data"].get("serviceId"))
 tc("RAD-037", M, "Radiology tests are mapped to billing services (price source)", mapped > 0, f"{mapped} of {len(tests)} radiology tests have a billing service", ">0", severity="High")
 
@@ -149,6 +158,11 @@ oc2d = rdetail(oc2)
 tc("RAD-052", M, "Cancelled order retained with Cancelled status", oc2d["status"] == 4, f"status={oc2d['status']}", "Cancelled(4)", severity="Critical")
 s, d = tech.post(f"/rad/scheduling/order-items/{oc2d['items'][0]['id']}", {"scheduledAt": FUT.isoformat(), "notes": None})
 tc("RAD-053", M, "Scheduling a CANCELLED order blocked", rej(s), f"{s} {msg(d)}", "Rejected", severity="Critical")
+_cs, _cd = rorder("Hotel", [47]); _co = idof(_cd); _ci = rdetail(_co)["items"][0]
+tech.post(f"/rad/scheduling/order-items/{_ci['id']}", {"scheduledAt": (FUT + datetime.timedelta(days=7)).isoformat(), "notes": None})
+s, d = admin.post(f"/rad/orders/{_co}/items/{_ci['id']}/cancel")
+tc("RAD-059", M, "A scheduled (not yet performed) scan can be cancelled, e.g. patient no-show", ok(s) and rdetail(_co)["items"][0]["status"] == 7,
+   f"{s} {msg(d)} item status={rdetail(_co)['items'][0]['status']}", "Cancelled; slot released", severity="High")
 s, d = tech.get("/rad/orders/tat-report"); tc("RAD-054", M, "TAT report loads", s == 200, f"{s}", "200", severity="Low")
 s, d = rad.get("/rad/reports/queue?status=4"); tc("RAD-055", M, "Radiologist reporting queue loads", s == 200, f"{s}", "200", severity="Medium")
 summary()

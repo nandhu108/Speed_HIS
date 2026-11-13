@@ -131,9 +131,11 @@ for t, lab_ in ((2, "Lab"), (3, "Radiology"), (5, "Nursing")):
     tc(f"IPD-03{3 + t}", MG, f"Doctor {lab_} order", ok(s), f"{s} {msg(d)}", "Created", severity="High")
 s, d = doc.post(f"/ipd/admissions/{A}/orders", {"orderedByDoctorId": DOC, "orderType": 4, "description": "Diet", "priority": 1, "notes": None, "medication": None, "diet": {"dietType": "Diabetic", "instructions": None}})
 tc("IPD-039", MG, "Diet order", ok(s), f"{s} {msg(d)}", "Created", severity="Medium")
-lab_orders = admin.get(f"/lab/orders?PatientId={pA}&Page=1&PageSize=5")[1]["data"]["totalCount"]
-tc("IPD-040", MG, "IP doctor's Lab order reaches the Laboratory module", lab_orders >= 1, f"lab orders for patient={lab_orders}", ">= 1 lab order created", "Doctor raises Lab order on admission -> check /lab/orders", severity="High",
-   bug="IP doctor lab/radiology orders are free-text order-sheet entries only; they do not create Lab/Radiology orders (CreateLabOrderRequest has no admissionId), so the lab never receives them.")
+_ls, _ld = doc.post("/lab/orders", {"patientId": pA, "opVisitId": None, "emergencyVisitId": None, "clinicalOrderId": None, "orderedByDoctorId": DOC,
+                                    "priority": 1, "clinicalNotes": "QA IP investigation", "items": [{"labTestId": 7, "testProfileId": None}], "admissionId": A})
+_lab_orders = admin.get(f"/lab/orders?PatientId={pA}&Page=1&PageSize=5")[1]["data"]["totalCount"]
+tc("IPD-040", MG, "Inpatient lab order (against the admission) reaches the Laboratory module", ok(_ls) and _lab_orders >= 1, f"{_ls} {msg(_ld)} lab orders={_lab_orders}",
+   ">= 1 lab order linked to the admission", "Admission page > Order lab test", severity="High")
 orders = doc.get(f"/ipd/admissions/{A}/orders")[1]["data"]
 lastnurse = [o for o in orders if o["orderType"] == 5][0]
 s, d = doc.post(f"/ipd/admissions/{A}/orders/{lastnurse['id']}/cancel", {"reason": ""})
@@ -229,6 +231,8 @@ tc("IPD-060", MG, "Generate IP bill", ok(s), f"{s} {msg(d)}", "IP bill", severit
 ib = d["data"] if ok(s) else {}
 print("IP BILL RAW:", json.dumps(ib)[:900])
 bedlines = [i for i in ib.get("items", []) if i["sourceType"] == 5]
+tc("IPD-065", MG, "Inpatient lab test is charged to the IP bill", any(i["sourceType"] == 8 for i in ib.get("items", [])),
+   f"lines={[(i['sourceType'], i['description']) for i in ib.get('items', [])]}", "Lab line on the IP bill", severity="High")
 tc("IPD-061", MG, "IP bill carries bed charges for every bed occupied (General, Semi-Private, ICU)", len(bedlines) >= 2, f"{len(bedlines)} bed-charge lines: {[(i['description'], i['quantity'], i['rate']) for i in bedlines]}", ">= 1 line per ward stayed", severity="High")
 tc("IPD-062", MG, "Bed charge rate > 0 (room-type tariff configured)", all(D(str(i["rate"])) > 0 for i in bedlines) and bedlines, f"{[(i['description'], i['rate']) for i in bedlines]}", "Non-zero rates", severity="High", bug="Configuration gap: General Ward and Semi-Private room types bill 0.00/day in the Speed Multi branch, so those IP stays carry no bed charge.")
 issued = [i for i in ib.get("items", []) if "Actrapid" in i["description"] or i["sourceType"] not in (1, 2, 3, 4, 5, 6)]
@@ -271,9 +275,18 @@ tc("DIS-005", MD, "Billing clearance is refused while the IP bill has an unpaid 
 s, d = hn.post(f"/ipd/admissions/{A}/discharge/clearances/2", {"remarks": "head nurse clearing PHARMACY"})
 tc("DIS-006", MD, "Pharmacy clearance can only be given by pharmacy (per-department clearance rights)", s == 403, f"{s} {msg(d)}", "403 for a nurse clearing the pharmacy item", severity="High",
    bug="Discharge clearances use one permission (IPD.DISCHARGE.CLEAR): a Head Nurse can sign off the Billing and Pharmacy clearances; billing/pharmacy roles cannot give their own clearance.")
+_ipb = [x for x in bil.get(f"/billing/bills?PatientId={pA}&Page=1&PageSize=10")[1]["data"]["items"] if x["billType"] == 2 and x["status"] != 4]
+for _b in _ipb:
+    _adv = admin.get(f"/billing/advances/patient/{pA}")[1]["data"]; _advl = _adv if isinstance(_adv, list) else _adv.get("items", [])
+    _avail = sum((x.get("balanceAmount") or 0) for x in _advl)
+    if _advl and _avail > 0 and _b["balanceAmount"] > 0:
+        bil.post(f"/billing/bills/{_b['id']}/advances/draw", {"advanceId": _advl[0]["id"], "amount": min(_b["balanceAmount"], _advl[0].get("balanceAmount") or 0)})
+    _bb = bil.get(f"/billing/bills/{_b['id']}")[1]["data"]
+    if _bb["balanceAmount"] > 0:
+        bil.post(f"/billing/bills/{_b['id']}/payments", {"paymentModeId": 1, "amount": _bb["balanceAmount"], "referenceNumber": None})
 s, d = bil.post(f"/ipd/admissions/{A}/discharge/clearances/1", {"remarks": "billing clearing billing"})
 tc("DIS-025", MD, "Billing role can give the Billing clearance", ok(s), f"{s} {msg(d)}", "Billing clears its own item", severity="High")
-for ct, who in ((2, hn), (3, hn), (4, hn), (1, hn)):
+for ct, who in ((2, ph), (3, hn), (4, doc)):
     who.post(f"/ipd/admissions/{A}/discharge/clearances/{ct}", {"remarks": "QA clear"})
 cl = admin.get(f"/ipd/admissions/{A}/discharge/clearances")[1]["data"]
 print("CLEARANCES:", json.dumps(cl)[:400])
