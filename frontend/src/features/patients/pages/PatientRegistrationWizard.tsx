@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import '../registration.css'
 import { errorMessage } from '../../../api/axios'
 import {
   compactErrors,
@@ -13,9 +14,7 @@ import {
   type FieldErrors,
 } from '../../../lib/formValidation'
 import { endpoints } from '../../../api/endpoints'
-import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
-import { PageHeader } from '../../../components/ui/PageHeader'
 import { Select } from '../../../components/ui/Select'
 import { useAreas, useSimpleMaster, useReferrers } from '../../masters/api'
 import { useCheckDuplicates, useRegisterPatient, useUploadPatientPhoto } from '../api'
@@ -38,6 +37,45 @@ import {
 import { DuplicateWarningModal } from '../components/DuplicateWarningModal'
 
 const steps = ['Demographics', 'Contact & Address', 'Guardian & IDs', 'Review'] as const
+
+/** Per-step copy for the stepper, hero and form header. */
+const stepMeta = [
+  { short: 'Name, age, gender', hero: 'Demographics — identity & basics', title: 'Patient demographics', sub: 'Fields marked * are required to register' },
+  { short: 'Phone, address, category', hero: 'Contact & address', title: 'Contact & address', sub: 'Mobile is used for tokens, SMS and reports' },
+  { short: 'Kin, IDs, insurance', hero: 'Guardian, identity & insurance', title: 'Guardian, IDs & insurance', sub: 'Attender contacts, identity documents and policies' },
+  { short: 'Verify & register', hero: 'Review & confirm', title: 'Review & confirm', sub: 'Check the details, add a photo, then register' },
+] as const
+
+/** Whole years between a yyyy-mm-dd date of birth and today, or null if unparsable/future. */
+function ageFromDob(dob: string): number | null {
+  if (!dob) return null
+  const birth = new Date(`${dob}T00:00:00`)
+  if (Number.isNaN(birth.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const m = now.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+  return age >= 0 ? age : null
+}
+
+/** Accessible on/off card used for VIP / SMS / Insurance toggles. */
+function SwitchCard(props: { on: boolean; onToggle: () => void; title: ReactNode; sub: string; gold?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={props.on}
+      onClick={props.onToggle}
+      className={`reg-switch${props.gold ? ' gold' : ''}${props.on ? ' on' : ''}`}
+    >
+      <span className="reg-sw" aria-hidden />
+      <span>
+        <b>{props.title}</b>
+        <small>{props.sub}</small>
+      </span>
+    </button>
+  )
+}
 
 interface FormState {
   salutationId: string
@@ -356,281 +394,481 @@ export function PatientRegistrationWizard() {
   const removeInsurancePolicy = (index: number) =>
     set('insurancePolicies', form.insurancePolicies.filter((_, i) => i !== index))
 
-  return (
-    <>
-      <PageHeader title="New Patient Registration" subtitle={`Step ${step + 1} of ${steps.length}: ${steps[step]}`} />
+  // ── Derived view state (live preview + completeness) ───────────────────────
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(photoFile)
+    setPhotoUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [photoFile])
 
-      <div className="mb-6 flex gap-1">
-        {steps.map((label, index) => (
-          <div
-            key={label}
-            className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-primary-600' : 'bg-slate-200'}`}
+  const nameOf = (list: { id: number; name: string }[], id: string) =>
+    id ? (list.find((x) => String(x.id) === id)?.name ?? '—') : '—'
+
+  const fullName = [nameOf(salutations, form.salutationId), form.firstName, form.middleName, form.lastName]
+    .filter((p) => p && p !== '—')
+    .join(' ')
+    .trim()
+  const initials = [form.firstName, form.lastName]
+    .map((p) => p.trim().charAt(0).toUpperCase())
+    .join('')
+  const age = form.dobKnown ? ageFromDob(form.dateOfBirth) : form.estimatedAge ? Number(form.estimatedAge) : null
+  const ageText = age === null ? 'Age —' : `${age} yrs${form.dobKnown ? '' : ' (est.)'}`
+
+  const checks = useMemo(
+    () => [
+      { label: 'Patient full name', ok: !isBlank(form.firstName) && !isBlank(form.lastName) },
+      { label: 'Age / date of birth', ok: form.dobKnown ? !isBlank(form.dateOfBirth) : !isBlank(form.estimatedAge) },
+      { label: 'Mobile number', ok: !isBlank(form.mobile) && !mobileError(form.mobile) },
+      { label: 'Blood group', ok: !isBlank(form.bloodGroup) },
+      { label: 'Address', ok: !isBlank(form.address) },
+      { label: 'Patient photo', ok: !!photoFile },
+    ],
+    [form.firstName, form.lastName, form.dobKnown, form.dateOfBirth, form.estimatedAge, form.mobile, form.bloodGroup, form.address, photoFile],
+  )
+  const requiredDone = checks.slice(0, 3).filter((c) => c.ok).length
+  const completeness = Math.round((checks.filter((c) => c.ok).length / checks.length) * 100)
+  const progressPct = ((step + 1) / steps.length) * 100
+  const submitting = checkDuplicates.isPending || register.isPending
+
+  const jumpTo = (target: number) => {
+    if (target < step) {
+      setError(null)
+      setFieldErrors({})
+      setStep(target)
+    } else if (target === step + 1) {
+      goNext()
+    }
+  }
+
+  const ageField = (
+    <div>
+      <span className="reg-label">
+        Age <span className="reg-req">*</span>
+      </span>
+      <div className="reg-radioRow">
+        <label className="reg-radio">
+          <input type="radio" checked={form.dobKnown} onChange={() => set('dobKnown', true)} />
+          Date of birth
+        </label>
+        <label className="reg-radio">
+          <input type="radio" checked={!form.dobKnown} onChange={() => set('dobKnown', false)} />
+          Estimated age
+        </label>
+      </div>
+      {form.dobKnown ? (
+        <div className="reg-dateWrap">
+          <Input
+            type="date"
+            required
+            aria-label="Date of birth"
+            max={new Date().toISOString().slice(0, 10)}
+            error={fieldErrors.dateOfBirth}
+            value={form.dateOfBirth}
+            onChange={(e) => set('dateOfBirth', e.target.value)}
           />
-        ))}
+          {age !== null && !fieldErrors.dateOfBirth && <span className="reg-ageEcho">{age} yrs</span>}
+        </div>
+      ) : (
+        <Input
+          type="number"
+          min={0}
+          max={130}
+          required
+          aria-label="Estimated age"
+          error={fieldErrors.estimatedAge}
+          placeholder="Age in years, e.g. 34"
+          value={form.estimatedAge}
+          onChange={(e) => set('estimatedAge', e.target.value)}
+        />
+      )}
+      <p className="reg-hint">Age is calculated automatically from the date of birth.</p>
+    </div>
+  )
+
+  return (
+    <div className="reg">
+      <div className="reg-tabs">
+        <span className="reg-miniTab">
+          <i>◈</i> OP Registration
+        </span>
+        <span className="reg-crumbs">Front Office / Patients / New</span>
+        <button type="button" className="reg-linkBtn" onClick={() => navigate('/patients')}>
+          ⌕ Find existing patient
+        </button>
       </div>
 
-      <div className="max-w-2xl rounded-lg border border-slate-200 bg-white p-6">
-        {error && <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-        {step === 0 && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-4 gap-3">
-              <Select
-                label="Salutation"
-                placeholder="—"
-                options={salutations.map((s) => ({ value: s.id, label: s.name }))}
-                value={form.salutationId}
-                onChange={(e) => set('salutationId', e.target.value)}
-              />
-              <Input
-                label="First name"
-                required
-                error={fieldErrors.firstName}
-                value={form.firstName}
-                onChange={(e) => set('firstName', e.target.value)}
-              />
-              <Input label="Middle name" value={form.middleName} onChange={(e) => set('middleName', e.target.value)} />
-              <Input
-                label="Last name"
-                required
-                error={fieldErrors.lastName}
-                value={form.lastName}
-                onChange={(e) => set('lastName', e.target.value)}
-              />
+      <section className="reg-hero">
+        <div className="reg-heroTop">
+          <div className="reg-heroTitle">
+            <h1 className="reg-display">
+              New Patient <span className="reg-gold">Registration</span>
+            </h1>
+            <p>
+              <span className="reg-stepPill">
+                STEP {step + 1} OF {steps.length}
+              </span>
+              <span>{stepMeta[step].hero}</span>
+            </p>
+          </div>
+          <div className="reg-heroStats">
+            <div className={`reg-stat${requiredDone === 3 ? ' good' : ''}`}>
+              <small>Required</small>
+              <b className="reg-display">{requiredDone} / 3</b>
+              <em>name · age · mobile</em>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <Select
-                label="Gender"
-                options={Object.entries(GENDER_LABELS).map(([value, label]) => ({ value, label }))}
-                value={String(form.gender)}
-                onChange={(e) => set('gender', Number(e.target.value) as Gender)}
-              />
-              <Input label="Blood group" placeholder="e.g. O+" value={form.bloodGroup} onChange={(e) => set('bloodGroup', e.target.value)} />
-              <Select
-                label="Marital status"
-                placeholder="—"
-                options={maritalStatuses.map((s) => ({ value: s.id, label: s.name }))}
-                value={form.maritalStatusId}
-                onChange={(e) => set('maritalStatusId', e.target.value)}
-              />
+            <div className="reg-stat">
+              <small>Completeness</small>
+              <b className="reg-display">{completeness}%</b>
+              <em>of key details</em>
+            </div>
+            <div className="reg-stat good">
+              <small>UHID</small>
+              <b className="reg-display">● Auto</b>
+              <em>assigned on register</em>
+            </div>
+          </div>
+        </div>
+
+        <div className="reg-stepper">
+          {steps.map((label, index) => {
+            const state = index === step ? 'current' : index < step ? 'done' : ''
+            return (
+              <button
+                key={label}
+                type="button"
+                className={`reg-step ${state}`}
+                aria-current={index === step ? 'step' : undefined}
+                disabled={index > step + 1}
+                onClick={() => jumpTo(index)}
+              >
+                <span className="n">{index < step ? '✓' : `0${index + 1}`}</span>
+                <span>
+                  <b>{label}</b>
+                  <small>{stepMeta[index].short}</small>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="reg-progressWrap">
+          <div className="reg-progressMeta">
+            <span>
+              Step {step + 1} of {steps.length} • {steps[step]}
+            </span>
+            <span>{progressPct}% complete</span>
+          </div>
+          <div className="reg-progress">
+            <i style={{ width: `${progressPct}%` }} />
+          </div>
+        </div>
+      </section>
+
+      <div className="reg-layout">
+        <section className="reg-card reg-formCard">
+          <div className="reg-formHead">
+            <div className="fi" aria-hidden>
+              ◍
             </div>
             <div>
-              <div className="mb-1 flex items-center gap-4">
-                <span className="text-sm font-medium text-slate-700">
-                  Age
-                  <span className="ml-0.5 text-crit" title="Required">
-                    *
-                  </span>
-                </span>
-                <label className="flex items-center gap-1.5 text-sm text-slate-600">
-                  <input type="radio" checked={form.dobKnown} onChange={() => set('dobKnown', true)} />
-                  Date of birth
-                </label>
-                <label className="flex items-center gap-1.5 text-sm text-slate-600">
-                  <input type="radio" checked={!form.dobKnown} onChange={() => set('dobKnown', false)} />
-                  Estimated age
-                </label>
-              </div>
-              {form.dobKnown ? (
-                <Input
-                  type="date"
-                  required
-                  error={fieldErrors.dateOfBirth}
-                  value={form.dateOfBirth}
-                  onChange={(e) => set('dateOfBirth', e.target.value)}
+              <b>{stepMeta[step].title}</b>
+              <small>{stepMeta[step].sub}</small>
+            </div>
+            <div className="reg-uhid">
+              <small>UHID</small>
+              <br />
+              <b>Assigned on save</b>
+              <em className="reg-pill">● New</em>
+            </div>
+          </div>
+
+          {error && (
+            <p role="alert" className="reg-alert">
+              {error}
+            </p>
+          )}
+
+          {step === 0 && (
+            <div className="reg-formBody reg-stack" key="s0">
+              <div className="reg-grid4">
+                <Select
+                  label="Salutation"
+                  placeholder="—"
+                  options={salutations.map((s) => ({ value: s.id, label: s.name }))}
+                  value={form.salutationId}
+                  onChange={(e) => set('salutationId', e.target.value)}
                 />
-              ) : (
                 <Input
+                  label="First name"
+                  required
+                  placeholder="e.g. Aarav"
+                  autoComplete="off"
+                  error={fieldErrors.firstName}
+                  value={form.firstName}
+                  onChange={(e) => set('firstName', e.target.value)}
+                />
+                <Input
+                  label="Middle name"
+                  placeholder="Optional"
+                  autoComplete="off"
+                  value={form.middleName}
+                  onChange={(e) => set('middleName', e.target.value)}
+                />
+                <Input
+                  label="Last name"
+                  required
+                  placeholder="e.g. Sharma"
+                  autoComplete="off"
+                  error={fieldErrors.lastName}
+                  value={form.lastName}
+                  onChange={(e) => set('lastName', e.target.value)}
+                />
+              </div>
+              <div className="reg-grid3">
+                <Select
+                  label="Gender"
+                  options={Object.entries(GENDER_LABELS).map(([value, label]) => ({ value, label }))}
+                  value={String(form.gender)}
+                  onChange={(e) => set('gender', Number(e.target.value) as Gender)}
+                />
+                <div>
+                  <Input
+                    label="Blood group"
+                    placeholder="e.g. O+"
+                    value={form.bloodGroup}
+                    onChange={(e) => set('bloodGroup', e.target.value)}
+                  />
+                  <p className="reg-hint">Used for emergency &amp; lab matching</p>
+                </div>
+                <Select
+                  label="Marital status"
+                  placeholder="—"
+                  options={maritalStatuses.map((s) => ({ value: s.id, label: s.name }))}
+                  value={form.maritalStatusId}
+                  onChange={(e) => set('maritalStatusId', e.target.value)}
+                />
+              </div>
+              {ageField}
+              <Select
+                label="Language"
+                placeholder="— Select preferred language —"
+                options={languages.map((l) => ({ value: l.id, label: l.name }))}
+                value={form.languageId}
+                onChange={(e) => set('languageId', e.target.value)}
+              />
+              <div className="reg-grid2">
+                <Select
+                  label="Patient case type"
+                  placeholder="—"
+                  options={patientCaseTypes.map((c) => ({ value: c.id, label: c.name }))}
+                  value={form.patientCaseTypeId}
+                  onChange={(e) => set('patientCaseTypeId', e.target.value)}
+                />
+                <Select
+                  label="Patient tag"
+                  placeholder="—"
+                  options={patientHcTags.map((t) => ({ value: t.id, label: t.name }))}
+                  value={form.patientHcTagId}
+                  onChange={(e) => set('patientHcTagId', e.target.value)}
+                />
+              </div>
+              <Select
+                label="Specially abled category"
+                placeholder="— none —"
+                options={speciallyAbledCategories.map((c) => ({ value: c.id, label: c.name }))}
+                value={form.speciallyAbledCategoryId}
+                onChange={(e) => set('speciallyAbledCategoryId', e.target.value)}
+              />
+              <div className="reg-switchRow">
+                <SwitchCard
+                  gold
+                  on={form.isVip}
+                  onToggle={() => set('isVip', !form.isVip)}
+                  title={
+                    <>
+                      <span className="reg-crown">♛</span> VIP
+                    </>
+                  }
+                  sub="Flag the patient as VIP"
+                />
+                <SwitchCard
+                  on={form.smsOptIn}
+                  onToggle={() => set('smsOptIn', !form.smsOptIn)}
+                  title="✉ SMS updates"
+                  sub="Token, report & payment alerts"
+                />
+              </div>
+              <div className="reg-grid3">
+                <Input
+                  label="Occupation"
+                  placeholder="e.g. Teacher"
+                  value={form.occupation}
+                  onChange={(e) => set('occupation', e.target.value)}
+                />
+                <Input
+                  label="Monthly income"
                   type="number"
                   min={0}
-                  max={130}
+                  placeholder="e.g. 45000"
+                  value={form.monthlyIncome}
+                  onChange={(e) => set('monthlyIncome', e.target.value)}
+                />
+                <Input
+                  label="Mother's name"
+                  placeholder="For minor / verification"
+                  value={form.motherName}
+                  onChange={(e) => set('motherName', e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="reg-formBody reg-stack" key="s1">
+              <div className="reg-grid3">
+                <Input
+                  label="Mobile"
                   required
-                  error={fieldErrors.estimatedAge}
-                  placeholder="Age in years"
-                  value={form.estimatedAge}
-                  onChange={(e) => set('estimatedAge', e.target.value)}
+                  inputMode="tel"
+                  placeholder="10-digit mobile"
+                  error={fieldErrors.mobile}
+                  value={form.mobile}
+                  onChange={(e) => set('mobile', e.target.value)}
+                />
+                <Input
+                  label="Alternate mobile"
+                  inputMode="tel"
+                  placeholder="Optional"
+                  error={fieldErrors.alternateMobile}
+                  value={form.alternateMobile}
+                  onChange={(e) => set('alternateMobile', e.target.value)}
+                />
+                <Input
+                  label="WhatsApp number"
+                  inputMode="tel"
+                  placeholder="Optional"
+                  error={fieldErrors.whatsAppNumber}
+                  value={form.whatsAppNumber}
+                  onChange={(e) => set('whatsAppNumber', e.target.value)}
+                />
+              </div>
+              <Input
+                label="Email"
+                type="email"
+                placeholder="name@mail.com"
+                error={fieldErrors.email}
+                value={form.email}
+                onChange={(e) => set('email', e.target.value)}
+              />
+              <Input
+                label="Present address"
+                placeholder="House / street / locality"
+                value={form.address}
+                onChange={(e) => set('address', e.target.value)}
+              />
+              <label className="reg-check">
+                <input
+                  type="checkbox"
+                  checked={form.isPermanentSameAsPresent}
+                  onChange={(e) => set('isPermanentSameAsPresent', e.target.checked)}
+                />
+                Permanent address same as present address
+              </label>
+              {!form.isPermanentSameAsPresent && (
+                <Input
+                  label="Permanent address"
+                  value={form.permanentAddress}
+                  onChange={(e) => set('permanentAddress', e.target.value)}
                 />
               )}
-            </div>
-            <Select
-              label="Language"
-              placeholder="—"
-              options={languages.map((l) => ({ value: l.id, label: l.name }))}
-              value={form.languageId}
-              onChange={(e) => set('languageId', e.target.value)}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                label="Patient case type"
-                placeholder="—"
-                options={patientCaseTypes.map((c) => ({ value: c.id, label: c.name }))}
-                value={form.patientCaseTypeId}
-                onChange={(e) => set('patientCaseTypeId', e.target.value)}
-              />
-              <Select
-                label="Patient tag"
-                placeholder="—"
-                options={patientHcTags.map((t) => ({ value: t.id, label: t.name }))}
-                value={form.patientHcTagId}
-                onChange={(e) => set('patientHcTagId', e.target.value)}
-              />
-            </div>
-            <Select
-              label="Specially abled category"
-              placeholder="— none —"
-              options={speciallyAbledCategories.map((c) => ({ value: c.id, label: c.name }))}
-              value={form.speciallyAbledCategoryId}
-              onChange={(e) => set('speciallyAbledCategoryId', e.target.value)}
-            />
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-1.5 text-sm text-slate-600">
-                <input type="checkbox" checked={form.isVip} onChange={(e) => set('isVip', e.target.checked)} />
-                VIP
-              </label>
-              <label className="flex items-center gap-1.5 text-sm text-slate-600">
-                <input type="checkbox" checked={form.smsOptIn} onChange={(e) => set('smsOptIn', e.target.checked)} />
-                SMS updates
-              </label>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="Occupation" value={form.occupation} onChange={(e) => set('occupation', e.target.value)} />
-              <Input
-                label="Monthly income"
-                type="number"
-                min={0}
-                value={form.monthlyIncome}
-                onChange={(e) => set('monthlyIncome', e.target.value)}
-              />
-              <Input label="Mother's name" value={form.motherName} onChange={(e) => set('motherName', e.target.value)} />
-            </div>
-          </div>
-        )}
-
-        {step === 1 && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <Input
-                label="Mobile"
-                required
-                error={fieldErrors.mobile}
-                value={form.mobile}
-                onChange={(e) => set('mobile', e.target.value)}
-              />
-              <Input
-                label="Alternate mobile"
-                error={fieldErrors.alternateMobile}
-                value={form.alternateMobile}
-                onChange={(e) => set('alternateMobile', e.target.value)}
-              />
-              <Input
-                label="WhatsApp number"
-                error={fieldErrors.whatsAppNumber}
-                value={form.whatsAppNumber}
-                onChange={(e) => set('whatsAppNumber', e.target.value)}
-              />
-            </div>
-            <Input
-              label="Email"
-              type="email"
-              error={fieldErrors.email}
-              value={form.email}
-              onChange={(e) => set('email', e.target.value)}
-            />
-            <Input label="Present address" value={form.address} onChange={(e) => set('address', e.target.value)} />
-            <label className="flex items-center gap-1.5 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={form.isPermanentSameAsPresent}
-                onChange={(e) => set('isPermanentSameAsPresent', e.target.checked)}
-              />
-              Permanent address same as present address
-            </label>
-            {!form.isPermanentSameAsPresent && (
-              <Input
-                label="Permanent address"
-                value={form.permanentAddress}
-                onChange={(e) => set('permanentAddress', e.target.value)}
-              />
-            )}
-            <div className="grid grid-cols-3 gap-3">
-              <Select
-                label="Country"
-                placeholder="— India —"
-                options={countries.map((c) => ({ value: c.id, label: c.name }))}
-                value={form.countryId}
-                onChange={(e) => set('countryId', e.target.value)}
-              />
-              <Select
-                label="Nationality"
-                placeholder="— India —"
-                options={countries.map((c) => ({ value: c.id, label: c.name }))}
-                value={form.nationalityId}
-                onChange={(e) => set('nationalityId', e.target.value)}
-              />
-              <Input label="Pincode" value={form.pincode} onChange={(e) => set('pincode', e.target.value)} />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <Select
-                label="State"
-                placeholder="—"
-                options={states.map((s) => ({ value: s.id, label: s.name }))}
-                value={form.stateId}
-                onChange={(e) => set('stateId', e.target.value)}
-              />
-              <Select
-                label="City"
-                placeholder="—"
-                options={cities.map((c) => ({ value: c.id, label: c.name }))}
-                value={form.cityId}
-                onChange={(e) => {
-                  set('cityId', e.target.value)
-                  set('areaId', '')
-                }}
-              />
-              <Select
-                label="Area"
-                placeholder="—"
-                options={areas.map((a) => ({ value: a.id, label: a.name }))}
-                value={form.areaId}
-                onChange={(e) => set('areaId', e.target.value)}
-                disabled={!form.cityId}
-              />
-            </div>
-            <Input label="National ID" value={form.nationalId} onChange={(e) => set('nationalId', e.target.value)} />
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                label="Patient category"
-                placeholder="— none —"
-                options={categories.map((c) => ({ value: c.id, label: c.name }))}
-                value={form.patientCategoryId}
-                onChange={(e) => set('patientCategoryId', e.target.value)}
-              />
-              <Select
-                label="Referrer"
-                placeholder="— none —"
-                options={(referrersResult?.items ?? []).map((r) => ({ value: r.id, label: r.name }))}
-                value={form.referrerId}
-                onChange={(e) => set('referrerId', e.target.value)}
-              />
-            </div>
-            <Input label="Remarks" value={form.remarks} onChange={(e) => set('remarks', e.target.value)} />
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-5">
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-700">Guardian / Attender</span>
-                <Button variant="secondary" onClick={addContact}>
-                  Add contact
-                </Button>
+              <div className="reg-grid3">
+                <Select
+                  label="Country"
+                  placeholder="— India —"
+                  options={countries.map((c) => ({ value: c.id, label: c.name }))}
+                  value={form.countryId}
+                  onChange={(e) => set('countryId', e.target.value)}
+                />
+                <Select
+                  label="Nationality"
+                  placeholder="— India —"
+                  options={countries.map((c) => ({ value: c.id, label: c.name }))}
+                  value={form.nationalityId}
+                  onChange={(e) => set('nationalityId', e.target.value)}
+                />
+                <Input
+                  label="Pincode"
+                  inputMode="numeric"
+                  placeholder="e.g. 600001"
+                  value={form.pincode}
+                  onChange={(e) => set('pincode', e.target.value)}
+                />
               </div>
-              {form.contacts.length === 0 && <p className="text-sm text-slate-400">No guardian or attender added.</p>}
-              <div className="space-y-3">
+              <div className="reg-grid3">
+                <Select
+                  label="State"
+                  placeholder="—"
+                  options={states.map((s) => ({ value: s.id, label: s.name }))}
+                  value={form.stateId}
+                  onChange={(e) => set('stateId', e.target.value)}
+                />
+                <Select
+                  label="City"
+                  placeholder="—"
+                  options={cities.map((c) => ({ value: c.id, label: c.name }))}
+                  value={form.cityId}
+                  onChange={(e) => {
+                    set('cityId', e.target.value)
+                    set('areaId', '')
+                  }}
+                />
+                <Select
+                  label="Area"
+                  placeholder={form.cityId ? '—' : 'Select a city first'}
+                  options={areas.map((a) => ({ value: a.id, label: a.name }))}
+                  value={form.areaId}
+                  onChange={(e) => set('areaId', e.target.value)}
+                  disabled={!form.cityId}
+                />
+              </div>
+              <Input label="National ID" value={form.nationalId} onChange={(e) => set('nationalId', e.target.value)} />
+              <div className="reg-grid2">
+                <Select
+                  label="Patient category"
+                  placeholder="— none —"
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                  value={form.patientCategoryId}
+                  onChange={(e) => set('patientCategoryId', e.target.value)}
+                />
+                <Select
+                  label="Referrer"
+                  placeholder="— none —"
+                  options={(referrersResult?.items ?? []).map((r) => ({ value: r.id, label: r.name }))}
+                  value={form.referrerId}
+                  onChange={(e) => set('referrerId', e.target.value)}
+                />
+              </div>
+              <Input label="Remarks" value={form.remarks} onChange={(e) => set('remarks', e.target.value)} />
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="reg-formBody" key="s2">
+              <div className="reg-sectionTitle">
+                <span>Guardian / Attender</span>
+                <button type="button" className="reg-btn reg-btnGhost reg-btnSm" onClick={addContact}>
+                  + Add contact
+                </button>
+              </div>
+              {form.contacts.length === 0 && <div className="reg-empty">No guardian or attender added.</div>}
+              <div className="reg-stack">
                 {form.contacts.map((contact, index) => (
-                  <div key={index} className="rounded-md border border-slate-200 p-3">
-                    <div className="grid grid-cols-2 gap-2">
+                  <div key={index} className="reg-rowCard">
+                    <div className="reg-grid2">
                       <Select
                         label="Type"
                         options={Object.entries(CONTACT_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
@@ -651,13 +889,14 @@ export function PatientRegistrationWizard() {
                       />
                       <Input
                         label="Phone"
+                        inputMode="tel"
                         error={fieldErrors[`contact-${index}-phone`]}
                         value={contact.phone ?? ''}
                         onChange={(e) => updateContact(index, { phone: e.target.value })}
                       />
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <label className="flex items-center gap-1.5 text-sm text-slate-600">
+                    <div className="mt-3 flex items-center justify-between">
+                      <label className="reg-check">
                         <input
                           type="checkbox"
                           checked={contact.isPrimary}
@@ -665,34 +904,35 @@ export function PatientRegistrationWizard() {
                         />
                         Primary contact
                       </label>
-                      <Button variant="ghost" className="text-red-600" onClick={() => removeContact(index)}>
+                      <button type="button" className="reg-btn reg-btnDanger" onClick={() => removeContact(index)}>
                         Remove
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
 
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-700">Identity documents</span>
-                <Button variant="secondary" onClick={addIdentifier}>
-                  Add ID
-                </Button>
+              <div className="reg-divider" />
+
+              <div className="reg-sectionTitle">
+                <span>Identity documents</span>
+                <button type="button" className="reg-btn reg-btnGhost reg-btnSm" onClick={addIdentifier}>
+                  + Add ID
+                </button>
               </div>
-              <p className="mb-2 text-xs text-slate-400">
+              <p className="reg-hint" style={{ marginTop: -4, marginBottom: 10 }}>
                 Aadhaar/ABHA are capture only — verification against UIDAI/ABDM is a future integration.
               </p>
-              <div className="space-y-2">
+              {form.identifiers.length === 0 && <div className="reg-empty">No identity document added.</div>}
+              <div className="reg-stack">
                 {form.identifiers.map((identifier, index) => (
-                  <div key={index} className="flex items-end gap-2">
+                  <div key={index} className="reg-rowCard flex flex-wrap items-end gap-3">
                     <Select
                       label="Type"
                       options={Object.entries(IDENTIFIER_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
                       value={String(identifier.type)}
                       onChange={(e) => updateIdentifier(index, { type: Number(e.target.value) as IdentifierType })}
-                      className="w-28"
+                      className="w-32"
                     />
                     {identifier.type === IDENTIFIER_TYPES.Other && (
                       <Select
@@ -705,52 +945,58 @@ export function PatientRegistrationWizard() {
                         onChange={(e) =>
                           updateIdentifier(index, { identityDocumentTypeId: e.target.value ? Number(e.target.value) : null })
                         }
-                        className="w-40"
+                        className="w-44"
                       />
                     )}
                     <Input
                       label="Number"
                       required
                       error={fieldErrors[`identifier-${index}-value`]}
-                      className="flex-1"
+                      className="min-w-40 flex-1"
                       value={identifier.value}
                       onChange={(e) => updateIdentifier(index, { value: e.target.value })}
                     />
-                    <Button variant="secondary" disabled title="Verification integration not yet available">
+                    <button
+                      type="button"
+                      className="reg-btn reg-btnGhost reg-btnSm"
+                      disabled
+                      title="Verification integration not yet available"
+                    >
                       Verify
-                    </Button>
-                    <Button variant="ghost" className="text-red-600" onClick={() => removeIdentifier(index)}>
+                    </button>
+                    <button type="button" className="reg-btn reg-btnDanger" onClick={() => removeIdentifier(index)}>
                       Remove
-                    </Button>
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
 
-            <div>
-              <label className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.insuranceRequired}
-                  onChange={(e) => set('insuranceRequired', e.target.checked)}
+              <div className="reg-divider" />
+
+              <div className="reg-switchRow">
+                <SwitchCard
+                  on={form.insuranceRequired}
+                  onToggle={() => set('insuranceRequired', !form.insuranceRequired)}
+                  title="♥ Insurance required"
+                  sub="Capture the patient's insurer / TPA policy"
                 />
-                Insurance required
-              </label>
+              </div>
               {form.insuranceRequired && (
-                <>
+                <div className="mt-4">
                   {fieldErrors.insurancePolicies && (
-                    <p role="alert" className="mb-2 text-xs font-medium text-crit">
+                    <p role="alert" className="reg-hint" style={{ color: 'var(--r-crit)', fontWeight: 600 }}>
                       {fieldErrors.insurancePolicies}
                     </p>
                   )}
-                  <div className="mb-2 flex justify-end">
-                    <Button variant="secondary" onClick={addInsurancePolicy}>
-                      Add policy
-                    </Button>
+                  <div className="reg-sectionTitle mt-2">
+                    <span>Policies</span>
+                    <button type="button" className="reg-btn reg-btnGhost reg-btnSm" onClick={addInsurancePolicy}>
+                      + Add policy
+                    </button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="reg-stack">
                     {form.insurancePolicies.map((policy, index) => (
-                      <div key={index} className="flex items-end gap-2">
+                      <div key={index} className="reg-rowCard flex flex-wrap items-end gap-3">
                         <Select
                           label="Insurer / TPA"
                           required
@@ -759,13 +1005,13 @@ export function PatientRegistrationWizard() {
                           options={insuranceCompanies.map((c) => ({ value: c.id, label: c.name }))}
                           value={policy.insuranceCompanyId || ''}
                           onChange={(e) => updateInsurancePolicy(index, { insuranceCompanyId: Number(e.target.value) })}
-                          className="w-48"
+                          className="w-52"
                         />
                         <Input
                           label="Policy number"
                           required
                           error={fieldErrors[`policy-${index}-number`]}
-                          className="flex-1"
+                          className="min-w-40 flex-1"
                           value={policy.policyNumber}
                           onChange={(e) => updateInsurancePolicy(index, { policyNumber: e.target.value })}
                         />
@@ -775,68 +1021,146 @@ export function PatientRegistrationWizard() {
                           value={policy.policyValidTo ?? ''}
                           onChange={(e) => updateInsurancePolicy(index, { policyValidTo: e.target.value || null })}
                         />
-                        <Button variant="ghost" className="text-red-600" onClick={() => removeInsurancePolicy(index)}>
+                        <button type="button" className="reg-btn reg-btnDanger" onClick={() => removeInsurancePolicy(index)}>
                           Remove
-                        </Button>
+                        </button>
                       </div>
                     ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4 text-sm">
-            <div className="rounded-md border border-slate-200 p-3">
-              <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Photo (optional)</p>
-              <PatientPhotoCapture patientId={null} personLabel="new-patient" onCaptured={setPhotoFile} compact />
-            </div>
-            <p>
-              <span className="text-slate-500">Name:</span>{' '}
-              <span className="font-medium">
-                {[form.firstName, form.middleName, form.lastName].filter(Boolean).join(' ')}
-              </span>
-            </p>
-            <p>
-              <span className="text-slate-500">Gender:</span> {GENDER_LABELS[form.gender]}
-            </p>
-            <p>
-              <span className="text-slate-500">Age:</span>{' '}
-              {form.dobKnown ? form.dateOfBirth || '—' : `~${form.estimatedAge || '—'} yrs (estimated)`}
-            </p>
-            <p>
-              <span className="text-slate-500">Mobile:</span> {form.mobile}
-            </p>
-            <p>
-              <span className="text-slate-500">Address:</span>{' '}
-              {[form.address, form.pincode].filter(Boolean).join(', ') || '—'}
-            </p>
-            <p>
-              <span className="text-slate-500">Contacts:</span> {form.contacts.length}
-            </p>
-            <p>
-              <span className="text-slate-500">Identifiers:</span> {form.identifiers.length}
-            </p>
-            <p>
-              <span className="text-slate-500">Insurance policies:</span> {form.insurancePolicies.length}
-            </p>
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-between border-t border-slate-100 pt-4">
-          <Button variant="secondary" onClick={goBack} disabled={step === 0}>
-            Back
-          </Button>
-          {step < steps.length - 1 ? (
-            <Button onClick={goNext}>Next</Button>
-          ) : (
-            <Button onClick={checkAndRegister} loading={checkDuplicates.isPending || register.isPending}>
-              Check &amp; Register
-            </Button>
           )}
-        </div>
+
+          {step === 3 && (
+            <div className="reg-formBody" key="s3">
+              <div className="reg-rowCard">
+                <div className="reg-sectionTitle">
+                  <span>Photo (optional)</span>
+                </div>
+                <PatientPhotoCapture patientId={null} personLabel="new-patient" onCaptured={setPhotoFile} compact />
+              </div>
+              <div className="reg-review mt-4">
+                {[
+                  ['Name', fullName || '—'],
+                  ['Gender', GENDER_LABELS[form.gender]],
+                  ['Age', form.dobKnown ? (form.dateOfBirth ? `${form.dateOfBirth} (${ageText})` : '—') : `~${form.estimatedAge || '—'} yrs (estimated)`],
+                  ['Blood group', form.bloodGroup || '—'],
+                  ['Mobile', form.mobile || '—'],
+                  ['Email', form.email || '—'],
+                  ['Address', [form.address, form.pincode].filter(Boolean).join(', ') || '—'],
+                  ['Language', nameOf(languages, form.languageId)],
+                  ['Patient category', nameOf(categories, form.patientCategoryId)],
+                  ['Case type', nameOf(patientCaseTypes, form.patientCaseTypeId)],
+                  ['VIP', form.isVip ? 'Yes' : 'No'],
+                  ['SMS updates', form.smsOptIn ? 'On' : 'Off'],
+                  ['Guardian / attender contacts', String(form.contacts.length)],
+                  ['Identity documents', String(form.identifiers.filter((i) => i.value.trim()).length)],
+                  ['Insurance policies', form.insuranceRequired ? String(form.insurancePolicies.length) : 'Not required'],
+                ].map(([k, v]) => (
+                  <div className="reg-kv" key={k}>
+                    <span>{k}</span>
+                    <b>{v}</b>
+                  </div>
+                ))}
+              </div>
+              <p className="reg-hint mt-3">A duplicate check runs before the patient is saved.</p>
+            </div>
+          )}
+
+          <div className="reg-formFoot">
+            <button type="button" className="reg-btn reg-btnGhost" onClick={goBack} disabled={step === 0 || submitting}>
+              ← Back
+            </button>
+            <div className="reg-dots" aria-hidden>
+              {steps.map((label, index) => (
+                <i key={label} className={index === step ? 'on' : ''} />
+              ))}
+            </div>
+            {step < steps.length - 1 ? (
+              <button type="button" className="reg-btn reg-btnPrimary" onClick={goNext}>
+                Next →
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="reg-btn reg-btnPrimary"
+                onClick={checkAndRegister}
+                disabled={submitting}
+                aria-busy={submitting || undefined}
+              >
+                {submitting && <span className="reg-spin" aria-hidden />}✓ Check &amp; Register
+              </button>
+            )}
+          </div>
+        </section>
+
+        <aside className="reg-rail">
+          <div className="reg-card reg-preview">
+            <div className="reg-previewTop">
+              <small>LIVE PREVIEW</small>
+              <div className="reg-prevName reg-display">{fullName || '— —'}</div>
+              <div className="reg-prevSub">
+                {ageText} • {GENDER_LABELS[form.gender]} • Blood {form.bloodGroup || '—'}
+              </div>
+              <div className="reg-prevTags">
+                {form.patientCaseTypeId && <span className="reg-tag teal">{nameOf(patientCaseTypes, form.patientCaseTypeId)}</span>}
+                {form.patientHcTagId && <span className="reg-tag">{nameOf(patientHcTags, form.patientHcTagId)}</span>}
+                <span className="reg-tag">New</span>
+                {form.isVip && <span className="reg-tag gold">★ VIP</span>}
+              </div>
+              <div className="reg-prevAvatar reg-display">
+                {photoUrl ? <img src={photoUrl} alt="Patient photo" /> : initials || '••'}
+              </div>
+            </div>
+            <div className="reg-previewBody">
+              <div className="reg-kv">
+                <span>UHID</span>
+                <b>Assigned on save</b>
+              </div>
+              <div className="reg-kv">
+                <span>Mobile</span>
+                <b>{form.mobile || '—'}</b>
+              </div>
+              <div className="reg-kv">
+                <span>Language</span>
+                <b>{nameOf(languages, form.languageId)}</b>
+              </div>
+              <div className="reg-kv">
+                <span>SMS alerts</span>
+                <b>{form.smsOptIn ? 'On' : 'Off'}</b>
+              </div>
+            </div>
+          </div>
+
+          <div className="reg-card reg-meterCard">
+            <h4>Form completeness</h4>
+            <p>
+              {completeness}% —{' '}
+              {requiredDone < 3 ? 'add name, age and mobile to register' : 'all required details captured'}
+            </p>
+            <div className="reg-meter">
+              <i style={{ width: `${completeness}%` }} />
+            </div>
+            <ul className="reg-checkList">
+              {checks.map((c) => (
+                <li key={c.label} className={c.ok ? 'ok' : ''}>
+                  <span className="reg-tick">✓</span> {c.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="reg-card reg-helpCard">
+            <h4>Before you register</h4>
+            <p>Search first to avoid a duplicate UHID. Insurance and MLC cases need extra documents — keep Aadhaar and the referral letter ready.</p>
+            <div className="reg-helpBtns">
+              <button type="button" className="solid" onClick={() => navigate('/patients')}>
+                Search patients
+              </button>
+            </div>
+          </div>
+        </aside>
       </div>
 
       {duplicates && (
@@ -850,6 +1174,6 @@ export function PatientRegistrationWizard() {
           }}
         />
       )}
-    </>
+    </div>
   )
 }
