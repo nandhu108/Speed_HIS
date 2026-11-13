@@ -30,8 +30,7 @@
   position: relative;
   container-type: inline-size;
   container-name: reg;
-  max-width: 1360px;
-  margin: 0 auto;
+  width: 100%;
   color: var(--r-ink);
   font-family: 'Inter', var(--font-sans);
   -webkit-font-smoothing: antialiased;
